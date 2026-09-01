@@ -1582,8 +1582,36 @@
     };
 
     // ==========================================
-    // 13. BOTS & SETTINGS & NOTICES
+    // 13. EMOTES, BOTS & SETTINGS & NOTICES
     // ==========================================
+    async function loadEmotes() {
+      try {
+        const snap = await getDocs(collection(db, "emotes"));
+        const list = [];
+        snap.forEach(docSnap => {
+          const d = docSnap.data();
+          list.push({
+            id: d.emote_id || docSnap.id,
+            name: d.name || "Emote",
+            category: (d.category || "ALL").toUpperCase(),
+            image_url: d.image_url || ""
+          });
+        });
+        if (list.length > 0) {
+          const existingIds = new Set(list.map(e => e.id));
+          DEFAULT_EMOTES.forEach(def => {
+            if (!existingIds.has(def.id)) {
+              list.push(def);
+            }
+          });
+          allEmotes = list;
+          renderEmotes();
+        }
+      } catch (err) {
+        console.warn("Emotes fetch error from Firestore:", err);
+      }
+    }
+
     async function loadBots() {
       const select = document.getElementById("botSelect");
       if (!select) return;
@@ -2123,9 +2151,10 @@
       // 4. Load Safe Config & Dynamic UID fields
       await loadConfig();
 
-      // 5. Load Settings & Bots
+      // 5. Load Settings, Bots & Emotes
       await loadSettings();
       await loadBots();
+      await loadEmotes();
 
       // 6. Check Session & Revalidate
       const isValid = await revalidateSession();

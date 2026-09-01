@@ -1,37 +1,72 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Settings collection: read-only by authenticated / client apps, write-restricted
-    match /settings/{settingId} {
+
+    // =========================================================================
+    // 1. KEYS COLLECTION
+    // =========================================================================
+    // User Panel validates license keys and device slot binding.
+    // Admin Panel reads the full key registry.
+    // Client browser creation and deletion are strictly rejected.
+    // Client updates are permitted ONLY for device binding (first_login_time, used_devices).
+    // All key generation, revocation, extension, and limits are managed via Flask Admin backend.
+    match /keys/{keyId} {
       allow read: if true;
-      allow write: if false;
+      allow create, delete: if false;
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['first_login_time', 'used_devices'])
+        && request.resource.data.key == resource.data.key
+        && request.resource.data.username == resource.data.username
+        && request.resource.data.validity_days == resource.data.validity_days
+        && request.resource.data.device_limit == resource.data.device_limit
+        && request.resource.data.active == resource.data.active;
     }
-    
-    // Bots configuration: read-only by client apps
+
+    // =========================================================================
+    // 2. BOTS INFRASTRUCTURE COLLECTION
+    // =========================================================================
+    // User and Admin panels read bot dispatch configurations.
+    // All creation, updates, and deletion are handled via Flask Admin backend.
     match /bots/{botId} {
       allow read: if true;
       allow write: if false;
     }
 
-    // Emotes collection: read-only by client apps
+    // =========================================================================
+    // 3. EMOTES CATALOG COLLECTION
+    // =========================================================================
+    // User and Admin panels read emote assets and catalog items.
+    // Direct browser mutations are forbidden.
     match /emotes/{emoteId} {
       allow read: if true;
       allow write: if false;
     }
-    
-    // Notices: read-only by client apps
+
+    // =========================================================================
+    // 4. BROADCAST NOTICES COLLECTION
+    // =========================================================================
+    // User Panel displays announcements; Admin Panel lists sent broadcasts.
+    // All broadcast dispatches are handled via Flask Admin backend.
     match /notices/{noticeId} {
       allow read: if true;
       allow write: if false;
     }
-    
-    // Access Keys: read key info and update device list / first login time
-    match /keys/{keyId} {
+
+    // =========================================================================
+    // 5. APPLICATION SETTINGS & CONFIGURATION
+    // =========================================================================
+    // Global parameters (app name, embed stream, maintenance mode).
+    // Direct browser modification is blocked.
+    match /settings/{settingDoc} {
       allow read: if true;
-      allow update: if request.resource.data.diff(resource.data).affectedKeys()
-        .hasOnly(['used_devices', 'first_login_time']);
-      allow create, delete: if false;
+      allow write: if false;
+    }
+
+    // =========================================================================
+    // DEFAULT DENY FALLBACK
+    // =========================================================================
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

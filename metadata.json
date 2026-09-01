@@ -1,6 +1,6 @@
 {
   "name": "MPX PANEL",
-  "description": "MPX PANEL - Complete Gaming User Panel",
+  "description": "MPX PANEL - Production Gaming User & Admin Panel with Unified Flask & Firebase Architecture",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
