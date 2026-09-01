@@ -1,0 +1,37 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Settings collection: read-only by authenticated / client apps, write-restricted
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if false;
+    }
+    
+    // Bots configuration: read-only by client apps
+    match /bots/{botId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Emotes collection: read-only by client apps
+    match /emotes/{emoteId} {
+      allow read: if true;
+      allow write: if false;
+    }
+    
+    // Notices: read-only by client apps
+    match /notices/{noticeId} {
+      allow read: if true;
+      allow write: if false;
+    }
+    
+    // Access Keys: read key info and update device list / first login time
+    match /keys/{keyId} {
+      allow read: if true;
+      allow update: if request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(['used_devices', 'first_login_time']);
+      allow create, delete: if false;
+    }
+  }
+}

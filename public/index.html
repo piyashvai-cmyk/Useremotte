@@ -1,0 +1,2145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>MPX PANEL</title>
+  <link rel="icon" id="dynamicFavicon" href="https://i.ibb.co.com/yc0vCb3S/file-00000000f7cc8207a918ce7ace9eaf03.png" type="image/png">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <!-- FontAwesome 6.4.0 CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    :root {
+      --primary: #eab308;
+      --primary-glow: rgba(234, 179, 8, 0.4);
+      --primary-dark: #ca8a04;
+      --bg-dark: #07090e;
+      --card-bg: rgba(16, 22, 34, 0.75);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --card-border-active: rgba(234, 179, 8, 0.5);
+    }
+
+    [data-theme="yellow"] {
+      --primary: #eab308;
+      --primary-glow: rgba(234, 179, 8, 0.45);
+      --primary-dark: #ca8a04;
+      --card-border-active: rgba(234, 179, 8, 0.5);
+    }
+    [data-theme="blue"] {
+      --primary: #3b82f6;
+      --primary-glow: rgba(59, 130, 246, 0.45);
+      --primary-dark: #2563eb;
+      --card-border-active: rgba(59, 130, 246, 0.5);
+    }
+    [data-theme="green"] {
+      --primary: #22c55e;
+      --primary-glow: rgba(34, 197, 94, 0.45);
+      --primary-dark: #16a34a;
+      --card-border-active: rgba(34, 197, 94, 0.5);
+    }
+    [data-theme="sky"] {
+      --primary: #0ea5e9;
+      --primary-glow: rgba(14, 165, 233, 0.45);
+      --primary-dark: #0284c7;
+      --card-border-active: rgba(14, 165, 233, 0.5);
+    }
+    [data-theme="pink"] {
+      --primary: #ec4899;
+      --primary-glow: rgba(236, 72, 153, 0.45);
+      --primary-dark: #db2777;
+      --card-border-active: rgba(236, 72, 153, 0.5);
+    }
+    [data-theme="orange"] {
+      --primary: #f97316;
+      --primary-glow: rgba(249, 115, 22, 0.45);
+      --primary-dark: #ea580c;
+      --card-border-active: rgba(249, 115, 22, 0.5);
+    }
+    [data-theme="teal"] {
+      --primary: #14b8a6;
+      --primary-glow: rgba(20, 184, 166, 0.45);
+      --primary-dark: #0d9488;
+      --card-border-active: rgba(20, 184, 166, 0.5);
+    }
+    [data-theme="red"] {
+      --primary: #ef4444;
+      --primary-glow: rgba(239, 68, 68, 0.45);
+      --primary-dark: #dc2626;
+      --card-border-active: rgba(239, 68, 68, 0.5);
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: #f3f4f6;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Ambient Background effects */
+    .bg-ambient {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background: radial-gradient(circle at 20% 15%, var(--primary-glow) 0%, transparent 40%),
+                  radial-gradient(circle at 80% 80%, rgba(20, 30, 60, 0.6) 0%, transparent 50%),
+                  #07090e;
+      transition: background 0.5s ease;
+    }
+
+    .bg-grid-pattern {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.04;
+      background-size: 32px 32px;
+      background-image: linear-gradient(to right, #fff 1px, transparent 1px),
+                        linear-gradient(to bottom, #fff 1px, transparent 1px);
+    }
+
+    /* Glassmorphism Card */
+    .glass-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: 1rem;
+      transition: border-color 0.25s, box-shadow 0.25s, transform 0.2s;
+    }
+    .glass-card:hover {
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    /* Custom scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.2);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--primary);
+    }
+
+    /* Dynamic Theme Colors */
+    .theme-text { color: var(--primary); }
+    .theme-bg { background-color: var(--primary); }
+    .theme-border { border-color: var(--primary); }
+    .theme-shadow { box-shadow: 0 0 20px var(--primary-glow); }
+    .theme-hover:hover { background-color: var(--primary-dark); }
+
+    /* Button Primary */
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: #000;
+      font-weight: 700;
+      border-radius: 0.75rem;
+      box-shadow: 0 4px 15px var(--primary-glow);
+      transition: all 0.2s ease;
+    }
+    .btn-primary:hover:not(:disabled) {
+      box-shadow: 0 6px 22px var(--primary-glow);
+      transform: translateY(-1px);
+      filter: brightness(1.08);
+    }
+    .btn-primary:active:not(:disabled) {
+      transform: translateY(0);
+    }
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      filter: grayscale(0.5);
+    }
+
+    /* Input UX with Actions */
+    .input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+      width: 100%;
+    }
+    .input-field {
+      width: 100%;
+      background: rgba(10, 15, 26, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 0.75rem;
+      padding: 0.75rem 5.5rem 0.75rem 1rem;
+      color: #fff;
+      font-size: 0.95rem;
+      outline: none;
+      transition: all 0.2s;
+    }
+    .input-field:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+      background: rgba(15, 22, 38, 0.95);
+    }
+    .input-actions {
+      position: absolute;
+      right: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+    .action-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 2.1rem;
+      height: 2.1rem;
+      border-radius: 0.5rem;
+      color: #9ca3af;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .action-btn:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.15);
+      border-color: var(--primary);
+    }
+    .action-btn:active {
+      transform: scale(0.95);
+    }
+
+    /* Emote Card */
+    .emote-card {
+      background: rgba(15, 22, 36, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 0.875rem;
+      padding: 0.75rem;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.22s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      user-select: none;
+    }
+    .emote-card:hover {
+      border-color: rgba(255, 255, 255, 0.25);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(0,0,0,0.35);
+    }
+    .emote-card.selected {
+      border-color: var(--primary);
+      background: rgba(20, 30, 50, 0.95);
+      box-shadow: 0 0 16px var(--primary-glow);
+    }
+    .emote-card .selected-badge {
+      display: none;
+      position: absolute;
+      top: 0.4rem;
+      right: 0.4rem;
+      width: 1.15rem;
+      height: 1.15rem;
+      border-radius: 9999px;
+      background: var(--primary);
+      color: #000;
+      font-size: 0.65rem;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+    }
+    .emote-card.selected .selected-badge {
+      display: flex;
+    }
+
+    /* Category Pill */
+    .cat-pill {
+      padding: 0.45rem 1rem;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      color: #9ca3af;
+      transition: all 0.2s;
+    }
+    .cat-pill:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.12);
+    }
+    .cat-pill.active {
+      background: var(--primary);
+      color: #000;
+      border-color: var(--primary);
+      box-shadow: 0 0 12px var(--primary-glow);
+    }
+
+    /* Nav items */
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      border-radius: 0.75rem;
+      color: #9ca3af;
+      font-weight: 600;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+    .nav-item:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.06);
+    }
+    .nav-item.active {
+      color: #000;
+      background: var(--primary);
+      box-shadow: 0 0 14px var(--primary-glow);
+    }
+
+    /* Mobile Bottom Navigation */
+    .mobile-nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.25rem;
+      padding: 0.5rem;
+      color: #9ca3af;
+      font-size: 0.75rem;
+      font-weight: 600;
+      flex: 1;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .mobile-nav-item.active {
+      color: var(--primary);
+      text-shadow: 0 0 8px var(--primary-glow);
+    }
+
+    /* Toast Container */
+    #toast-container {
+      position: fixed;
+      top: 1.25rem;
+      right: 1.25rem;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      pointer-events: none;
+      max-width: 90vw;
+      width: 360px;
+    }
+    .toast-item {
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.85rem 1.1rem;
+      border-radius: 0.75rem;
+      background: rgba(16, 23, 38, 0.95);
+      backdrop-filter: blur(12px);
+      color: #fff;
+      font-size: 0.9rem;
+      font-weight: 500;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6);
+      animation: toastIn 0.3s ease forwards;
+      border-left: 4px solid;
+    }
+    .toast-item.toast-success {
+      border-color: #22c55e;
+      box-shadow: 0 0 15px rgba(34, 197, 94, 0.3);
+    }
+    .toast-item.toast-error {
+      border-color: #ef4444;
+      box-shadow: 0 0 15px rgba(239, 68, 68, 0.3);
+    }
+    .toast-item.toast-warning {
+      border-color: #eab308;
+      box-shadow: 0 0 15px rgba(234, 179, 8, 0.3);
+    }
+    .toast-item.toast-info {
+      border-color: #3b82f6;
+      box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+    }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(-12px) scale(0.95); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes toastOut {
+      from { opacity: 1; transform: translateY(0) scale(1); }
+      to { opacity: 0; transform: translateY(-12px) scale(0.95); }
+    }
+
+    /* Modal Animation */
+    .modal-backdrop {
+      background: rgba(3, 5, 10, 0.85);
+      backdrop-filter: blur(8px);
+    }
+
+    /* Tab Transition */
+    .tab-content {
+      display: none;
+      animation: fadeIn 0.2s ease-in-out;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="bg-[#07090e] text-gray-100 flex flex-col min-h-screen">
+  <!-- Ambient background graphics -->
+  <div class="bg-ambient"></div>
+  <div class="bg-grid-pattern"></div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container"></div>
+
+  <!-- EMBED MODAL (For settings.embed_url) -->
+  <div id="embedModal" class="fixed inset-0 z-50 modal-backdrop hidden items-center justify-center p-4">
+    <div class="glass-card max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl border border-white/20">
+      <div class="flex items-center justify-between p-4 border-b border-white/10">
+        <div class="flex items-center gap-2">
+          <i class="fas fa-window-maximize theme-text"></i>
+          <h3 class="font-bold text-lg" id="embedModalTitle">Embedded Resource</h3>
+        </div>
+        <button type="button" onclick="closeEmbedModal()" class="text-gray-400 hover:text-white p-2 text-lg">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="flex-1 bg-black/50 p-2 min-h-[450px] relative">
+        <iframe id="embedIframe" class="w-full h-full min-h-[450px] rounded border-0" sandbox="allow-scripts allow-same-origin allow-forms"></iframe>
+        <div id="embedErrorFallback" class="hidden absolute inset-0 flex-col items-center justify-center p-6 text-center bg-gray-900/95">
+          <i class="fas fa-shield-alt text-4xl text-amber-400 mb-3"></i>
+          <p class="text-gray-200 font-semibold mb-2">This page cannot be embedded by the external website.</p>
+          <p class="text-sm text-gray-400 mb-4">Security policies of the destination server restrict embedding.</p>
+          <a id="embedExternalLink" href="#" target="_blank" class="btn-primary px-5 py-2.5 inline-flex items-center gap-2">
+            <i class="fas fa-external-link-alt"></i> Open in New Tab
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAINTENANCE MODE SCREEN -->
+  <div id="maintenanceScreen" class="fixed inset-0 z-50 bg-[#07090e] hidden flex-col items-center justify-center p-6 text-center">
+    <div class="glass-card max-w-md w-full p-8 flex flex-col items-center">
+      <div class="w-20 h-20 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mb-6 text-3xl text-amber-400 animate-pulse">
+        <i class="fas fa-tools"></i>
+      </div>
+      <h2 class="text-2xl font-black mb-2 text-white tracking-wider">SYSTEM MAINTENANCE</h2>
+      <p class="text-gray-400 text-sm mb-6 leading-relaxed">
+        MPX PANEL is currently undergoing scheduled system maintenance to enhance our servers. Normal access is temporarily paused.
+      </p>
+      <div class="w-full bg-white/5 border border-white/10 rounded-xl p-4 mb-6 text-left">
+        <div class="flex items-center gap-3 text-xs text-gray-300">
+          <i class="fas fa-circle-notch fa-spin text-amber-400"></i>
+          <span>Engineers are actively upgrading infrastructure.</span>
+        </div>
+      </div>
+      <button type="button" onclick="window.location.reload()" class="btn-primary w-full py-3">
+        <i class="fas fa-sync-alt mr-2"></i> Check Again
+      </button>
+    </div>
+  </div>
+
+  <!-- 1. LOGIN SCREEN -->
+  <div id="loginScreen" class="relative z-10 flex min-h-screen items-center justify-center p-4">
+    <div class="glass-card max-w-md w-full p-6 sm:p-8 relative overflow-hidden border border-white/15">
+      <!-- Glow decoration -->
+      <div class="absolute -top-12 -right-12 w-32 h-32 rounded-full bg-[var(--primary)] opacity-20 blur-2xl pointer-events-none"></div>
+
+      <!-- App Branding / Logo -->
+      <div class="flex flex-col items-center text-center mb-6">
+        <div class="w-20 h-20 rounded-2xl p-1 bg-gradient-to-tr from-white/10 to-white/5 border border-white/20 mb-4 shadow-xl flex items-center justify-center overflow-hidden">
+          <img id="loginLogoImg" src="https://i.ibb.co.com/yc0vCb3S/file-00000000f7cc8207a918ce7ace9eaf03.png" alt="MPX PANEL Logo" class="w-full h-full object-contain rounded-xl"
+               onerror="this.onerror=null; this.src='https://cdn.jsdelivr.net/gh/ShahGCreator/icon@main/PNG/909000063.png';">
+        </div>
+        <h1 class="text-3xl font-black tracking-wider text-white flex items-center gap-2">
+          MPX <span class="theme-text">PANEL</span>
+        </h1>
+        <p class="text-xs font-medium text-gray-400 mt-1 uppercase tracking-widest">Next-Gen Gaming Control</p>
+      </div>
+
+      <!-- Returning Device Badge -->
+      <div id="returningUserBanner" class="hidden mb-4 p-3 bg-white/5 border border-white/10 rounded-xl flex items-center justify-between text-xs">
+        <div class="flex items-center gap-2 text-gray-300">
+          <i class="fas fa-mobile-alt theme-text"></i>
+          <span>Welcome back, <strong id="savedUsernameText" class="text-white">Player</strong></span>
+        </div>
+        <button type="button" onclick="switchLoginMode(true)" class="text-xs text-amber-400 hover:underline font-semibold">
+          Switch User
+        </button>
+      </div>
+
+      <!-- Login Form -->
+      <form id="loginForm" onsubmit="handleLoginSubmit(event)" class="space-y-4">
+        
+        <!-- Username Field (Hidden on returning device unless switched) -->
+        <div id="usernameFieldGroup">
+          <label for="loginUsername" class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">
+            <i class="fas fa-user mr-1.5 theme-text"></i> Username
+          </label>
+          <div class="input-wrapper">
+            <input type="text" id="loginUsername" class="input-field" placeholder="Enter username" autocomplete="username">
+            <div class="input-actions">
+              <button type="button" class="action-btn" title="Clear" aria-label="Clear Username" onclick="clearInput('loginUsername')">
+                <i class="fas fa-times-circle"></i>
+              </button>
+              <button type="button" class="action-btn" title="Paste" aria-label="Paste Username" onclick="pasteInput('loginUsername')">
+                <i class="fas fa-paste"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Access Key Field -->
+        <div>
+          <label for="loginKey" class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">
+            <i class="fas fa-key mr-1.5 theme-text"></i> Access Key
+          </label>
+          <div class="input-wrapper">
+            <input type="text" id="loginKey" required class="input-field" placeholder="Enter access key" autocomplete="off">
+            <div class="input-actions">
+              <button type="button" class="action-btn" title="Clear" aria-label="Clear Key" onclick="clearInput('loginKey')">
+                <i class="fas fa-times-circle"></i>
+              </button>
+              <button type="button" class="action-btn" title="Paste" aria-label="Paste Key" onclick="pasteInput('loginKey')">
+                <i class="fas fa-paste"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" id="loginSubmitBtn" class="btn-primary w-full py-3.5 mt-2 flex items-center justify-center gap-2 text-base">
+          <i class="fas fa-bolt"></i>
+          <span>LOGIN</span>
+        </button>
+      </form>
+
+      <!-- System Badge -->
+      <div class="mt-6 pt-5 border-t border-white/10 flex items-center justify-between text-xs text-gray-500">
+        <span class="flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+          <span>Server Online</span>
+        </span>
+        <span>v2.5 High-Speed</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. MAIN APPLICATION (AUTHENTICATED) -->
+  <div id="mainApp" class="relative z-10 hidden flex-1 flex flex-col md:flex-row min-h-screen">
+    
+    <!-- DESKTOP FIXED SIDEBAR -->
+    <aside class="hidden md:flex flex-col w-64 lg:w-72 bg-[#090d16]/95 border-r border-white/10 p-5 sticky top-0 h-screen z-30 justify-between">
+      <div>
+        <!-- App Brand -->
+        <div class="flex items-center gap-3.5 pb-6 border-b border-white/10 mb-6">
+          <div class="w-12 h-12 rounded-xl p-1 bg-white/5 border border-white/15 flex items-center justify-center overflow-hidden flex-shrink-0">
+            <img src="https://i.ibb.co.com/yc0vCb3S/file-00000000f7cc8207a918ce7ace9eaf03.png" alt="Logo" class="w-full h-full object-contain rounded-lg"
+                 onerror="this.onerror=null; this.src='https://cdn.jsdelivr.net/gh/ShahGCreator/icon@main/PNG/909000063.png';">
+          </div>
+          <div>
+            <h2 class="font-black text-xl tracking-wider text-white leading-tight">MPX <span class="theme-text">PANEL</span></h2>
+            <span class="text-[10px] uppercase font-bold tracking-widest text-emerald-400 flex items-center gap-1 mt-0.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Connected
+            </span>
+          </div>
+        </div>
+
+        <!-- Navigation Links -->
+        <nav class="space-y-2">
+          <button type="button" onclick="openTab('home')" id="desktop-nav-home" class="nav-item active w-full">
+            <i class="fas fa-gamepad w-5 text-center"></i>
+            <span>Home</span>
+          </button>
+          <button type="button" onclick="openTab('emotes')" id="desktop-nav-emotes" class="nav-item w-full">
+            <i class="fas fa-fire w-5 text-center"></i>
+            <span>Emotes</span>
+          </button>
+          <button type="button" onclick="openTab('profile')" id="desktop-nav-profile" class="nav-item w-full">
+            <i class="fas fa-user-shield w-5 text-center"></i>
+            <span>Profile</span>
+          </button>
+        </nav>
+      </div>
+
+      <!-- Sidebar Footer Controls -->
+      <div class="pt-6 border-t border-white/10 space-y-3">
+        <!-- Global Controls: Sound + Theme -->
+        <div class="flex items-center justify-between p-2 rounded-xl bg-white/5 border border-white/10">
+          <!-- Sound button -->
+          <button type="button" id="sidebarSoundBtn" onclick="toggleSound()" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-300 hover:text-white bg-black/40 border border-white/5 transition" title="Toggle Sound">
+            <i class="fas fa-volume-up theme-text" id="sidebarSoundIcon"></i>
+            <span id="sidebarSoundText">Sound ON</span>
+          </button>
+
+          <!-- Theme Palette Selector button -->
+          <div class="relative">
+            <button type="button" onclick="toggleThemeDropdown('desktopThemeMenu')" class="w-8 h-8 rounded-lg flex items-center justify-center text-sm text-gray-300 hover:text-white bg-black/40 border border-white/5 theme-text transition" title="Change Theme">
+              <i class="fas fa-palette"></i>
+            </button>
+            <div id="desktopThemeMenu" class="hidden absolute bottom-10 right-0 p-3 glass-card bg-gray-900/95 border border-white/20 rounded-xl shadow-2xl grid grid-cols-4 gap-2 z-50 w-44">
+              <button type="button" onclick="setTheme('yellow')" class="w-8 h-8 rounded-full bg-yellow-500 hover:scale-110 transition border-2 border-white/30" title="Yellow"></button>
+              <button type="button" onclick="setTheme('blue')" class="w-8 h-8 rounded-full bg-blue-500 hover:scale-110 transition border-2 border-white/30" title="Blue"></button>
+              <button type="button" onclick="setTheme('green')" class="w-8 h-8 rounded-full bg-green-500 hover:scale-110 transition border-2 border-white/30" title="Green"></button>
+              <button type="button" onclick="setTheme('sky')" class="w-8 h-8 rounded-full bg-sky-500 hover:scale-110 transition border-2 border-white/30" title="Sky"></button>
+              <button type="button" onclick="setTheme('pink')" class="w-8 h-8 rounded-full bg-pink-500 hover:scale-110 transition border-2 border-white/30" title="Pink"></button>
+              <button type="button" onclick="setTheme('orange')" class="w-8 h-8 rounded-full bg-orange-500 hover:scale-110 transition border-2 border-white/30" title="Orange"></button>
+              <button type="button" onclick="setTheme('teal')" class="w-8 h-8 rounded-full bg-teal-500 hover:scale-110 transition border-2 border-white/30" title="Teal"></button>
+              <button type="button" onclick="setTheme('red')" class="w-8 h-8 rounded-full bg-red-500 hover:scale-110 transition border-2 border-white/30" title="Red"></button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Logout button -->
+        <button type="button" onclick="logout()" class="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-sm font-semibold transition">
+          <i class="fas fa-sign-out-alt"></i>
+          <span>Logout</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <div class="flex-1 flex flex-col min-w-0 pb-20 md:pb-8">
+      
+      <!-- MOBILE COMPACT HEADER -->
+      <header class="md:hidden flex items-center justify-between px-4 py-3 bg-[#090d16]/95 border-b border-white/10 sticky top-0 z-30 backdrop-blur-lg">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-lg p-0.5 bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden">
+            <img src="https://i.ibb.co.com/yc0vCb3S/file-00000000f7cc8207a918ce7ace9eaf03.png" alt="Logo" class="w-full h-full object-contain rounded-md"
+                 onerror="this.onerror=null; this.src='https://cdn.jsdelivr.net/gh/ShahGCreator/icon@main/PNG/909000063.png';">
+          </div>
+          <span class="font-black text-lg tracking-wider text-white">MPX <span class="theme-text">PANEL</span></span>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <!-- Mobile Sound button -->
+          <button type="button" onclick="toggleSound()" class="w-8 h-8 rounded-lg flex items-center justify-center bg-white/5 border border-white/10 text-xs theme-text" title="Sound">
+            <i class="fas fa-volume-up" id="mobileSoundIcon"></i>
+          </button>
+
+          <!-- Mobile Theme button -->
+          <div class="relative">
+            <button type="button" onclick="toggleThemeDropdown('mobileThemeMenu')" class="w-8 h-8 rounded-lg flex items-center justify-center bg-white/5 border border-white/10 text-xs theme-text" title="Theme">
+              <i class="fas fa-palette"></i>
+            </button>
+            <div id="mobileThemeMenu" class="hidden absolute top-10 right-0 p-3 glass-card bg-gray-900/98 border border-white/20 rounded-xl shadow-2xl grid grid-cols-4 gap-2 z-50 w-44">
+              <button type="button" onclick="setTheme('yellow')" class="w-8 h-8 rounded-full bg-yellow-500 border border-white/30"></button>
+              <button type="button" onclick="setTheme('blue')" class="w-8 h-8 rounded-full bg-blue-500 border border-white/30"></button>
+              <button type="button" onclick="setTheme('green')" class="w-8 h-8 rounded-full bg-green-500 border border-white/30"></button>
+              <button type="button" onclick="setTheme('sky')" class="w-8 h-8 rounded-full bg-sky-500 border border-white/30"></button>
+              <button type="button" onclick="setTheme('pink')" class="w-8 h-8 rounded-full bg-pink-500 border border-white/30"></button>
+              <button type="button" onclick="setTheme('orange')" class="w-8 h-8 rounded-full bg-orange-500 border border-white/30"></button>
+              <button type="button" onclick="setTheme('teal')" class="w-8 h-8 rounded-full bg-teal-500 border border-white/30"></button>
+              <button type="button" onclick="setTheme('red')" class="w-8 h-8 rounded-full bg-red-500 border border-white/30"></button>
+            </div>
+          </div>
+
+          <!-- Mobile Logout button -->
+          <button type="button" onclick="logout()" class="w-8 h-8 rounded-lg flex items-center justify-center bg-red-500/10 border border-red-500/20 text-xs text-red-400" title="Logout">
+            <i class="fas fa-sign-out-alt"></i>
+          </button>
+        </div>
+      </header>
+
+      <!-- NOTICES CONTAINER -->
+      <div id="noticesArea" class="px-4 pt-4 max-w-6xl w-full mx-auto hidden space-y-2"></div>
+
+      <!-- MAIN TAB CONTAINER -->
+      <main class="flex-1 px-4 py-4 md:py-6 max-w-6xl w-full mx-auto">
+        
+        <!-- ==================== TAB 1: HOME ==================== -->
+        <div id="tab-home" class="tab-content active space-y-5">
+          
+          <!-- Welcome & Validity Card -->
+          <div class="glass-card p-5 relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-white/10">
+            <div class="flex items-center gap-4">
+              <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-yellow-500/20 to-amber-600/20 border border-white/10 flex items-center justify-center text-xl theme-text">
+                <i class="fas fa-user-astronaut"></i>
+              </div>
+              <div>
+                <h3 class="font-bold text-lg text-white">Welcome, <span id="homeUsernameDisplay" class="theme-text">Player</span></h3>
+                <p class="text-xs text-gray-400">Status: <span id="homeStatusBadge" class="font-semibold text-emerald-400">ACTIVE</span></p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 bg-black/40 px-4 py-2 rounded-xl border border-white/5 self-start sm:self-auto">
+              <i class="fas fa-clock theme-text text-sm"></i>
+              <div>
+                <div class="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Validity</div>
+                <div id="homeValidityDisplay" class="text-sm font-bold text-white">Calculating...</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Configuration Controls Card (Region + Bot) -->
+          <div class="glass-card p-5 space-y-4">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2">
+              <i class="fas fa-sliders-h theme-text"></i> Server & Bot Config
+            </h4>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <!-- Region Selector -->
+              <div>
+                <label for="regionSelect" class="block text-xs font-semibold text-gray-300 mb-1.5">Region</label>
+                <select id="regionSelect" onchange="handleRegionChange()" class="w-full bg-[#0a0f1a] border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-[var(--primary)]">
+                  <option value="Sylhet">Sylhet</option>
+                  <option value="BD">BD</option>
+                  <option value="IND">IND</option>
+                  <option value="PK">PK</option>
+                  <option value="BR">BR</option>
+                  <option value="US">US</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <!-- Bot Selector -->
+              <div>
+                <label for="botSelect" class="block text-xs font-semibold text-gray-300 mb-1.5">BOT</label>
+                <select id="botSelect" onchange="handleBotChange()" class="w-full bg-[#0a0f1a] border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-[var(--primary)]">
+                  <option value="BOT-1">BOT-1 (Primary)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Target Parameters Card (Team Code + Dynamic UIDs) -->
+          <div class="glass-card p-5 space-y-4">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2">
+              <i class="fas fa-crosshairs theme-text"></i> Match & Player Credentials
+            </h4>
+
+            <!-- Team Code (ALWAYS REQUIRED) -->
+            <div>
+              <label for="teamCode" class="block text-xs font-semibold text-gray-300 mb-1.5">
+                Team Code <span class="text-red-400">*</span>
+              </label>
+              <div class="input-wrapper">
+                <input type="text" id="teamCode" class="input-field" placeholder="Enter Team Code">
+                <div class="input-actions">
+                  <button type="button" class="action-btn" aria-label="Clear Team Code" title="Clear" onclick="clearInput('teamCode')">
+                    <i class="fas fa-times-circle"></i>
+                  </button>
+                  <button type="button" class="action-btn" aria-label="Paste Team Code" title="Paste" onclick="pasteInput('teamCode')">
+                    <i class="fas fa-paste"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Dynamic UID Section (Dynamically rendered based on safe config) -->
+            <div id="dynamicUidContainer" class="space-y-3">
+              <!-- UID boxes inserted here dynamically -->
+            </div>
+          </div>
+
+          <!-- Selected Emote & Send Button -->
+          <div class="glass-card p-5 space-y-4">
+            <div class="flex items-center justify-between">
+              <div class="text-xs font-bold uppercase tracking-wider text-gray-400">Selected Emote</div>
+              <div id="selectedEmoteBadge" class="text-xs font-bold theme-text bg-white/5 px-2.5 py-1 rounded-md border border-white/10">
+                EVO AK (909000063)
+              </div>
+            </div>
+
+            <button type="button" id="sendEmoteBtn" onclick="sendEmote()" class="btn-primary w-full py-4 text-base font-extrabold flex items-center justify-center gap-3">
+              <i class="fas fa-paper-plane"></i>
+              <span id="sendEmoteBtnText">SEND EMOTE</span>
+            </button>
+          </div>
+
+          <!-- Quick Emotes (First 6 Emotes) -->
+          <div class="glass-card p-5 space-y-3">
+            <div class="flex items-center justify-between mb-2">
+              <h4 class="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2">
+                <i class="fas fa-bolt theme-text"></i> Quick Emotes (Instant Send)
+              </h4>
+              <span class="text-[11px] text-gray-500">Tap to send instantly</span>
+            </div>
+            <div id="quickEmotesGrid" class="grid grid-cols-3 sm:grid-cols-6 gap-2.5">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ==================== TAB 2: EMOTES ==================== -->
+        <div id="tab-emotes" class="tab-content space-y-5">
+          
+          <!-- Search & Header -->
+          <div class="glass-card p-4 space-y-4">
+            <div class="flex items-center justify-between">
+              <h3 class="font-bold text-lg text-white flex items-center gap-2">
+                <i class="fas fa-fire theme-text"></i> Emote Collection
+              </h3>
+              <span id="emoteCountBadge" class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-gray-400">20 Emotes</span>
+            </div>
+
+            <!-- Functional Search Field -->
+            <div class="input-wrapper">
+              <input type="text" id="emoteSearchInput" oninput="handleEmoteSearch()" class="input-field" placeholder="Search by name (e.g., 'Puffy', 'm4') or ID...">
+              <div class="input-actions">
+                <button type="button" class="action-btn" title="Clear Search" aria-label="Clear Search" onclick="clearSearchInput()">
+                  <i class="fas fa-times-circle"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- STRICT CATEGORY PILLS (ONLY ALL, EVO, OLD, RARE) -->
+            <div class="flex items-center gap-2 overflow-x-auto pb-1" id="categoryPillGroup">
+              <button type="button" onclick="setCategory('ALL')" class="cat-pill active" id="cat-ALL">ALL</button>
+              <button type="button" onclick="setCategory('EVO')" class="cat-pill" id="cat-EVO">EVO</button>
+              <button type="button" onclick="setCategory('OLD')" class="cat-pill" id="cat-OLD">OLD</button>
+              <button type="button" onclick="setCategory('RARE')" class="cat-pill" id="cat-RARE">RARE</button>
+            </div>
+          </div>
+
+          <!-- Emote Grid -->
+          <div id="fullEmoteGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5">
+            <!-- Emotes rendered here -->
+          </div>
+
+          <!-- Empty State -->
+          <div id="noEmotesFoundState" class="hidden glass-card p-12 text-center flex-col items-center justify-center">
+            <i class="fas fa-search text-4xl text-gray-600 mb-3"></i>
+            <p class="text-gray-300 font-semibold">No emotes found.</p>
+            <p class="text-xs text-gray-500 mt-1">Try another keyword or select the "ALL" category.</p>
+          </div>
+
+        </div>
+
+        <!-- ==================== TAB 3: PROFILE ==================== -->
+        <div id="tab-profile" class="tab-content space-y-5">
+          
+          <!-- User Profile Identity Card -->
+          <div class="glass-card p-6 flex flex-col sm:flex-row items-center gap-5 border border-white/10 text-center sm:text-left">
+            <div class="w-20 h-20 rounded-2xl bg-gradient-to-tr from-yellow-500/30 to-amber-600/30 border-2 border-[var(--primary)] flex items-center justify-center text-3xl theme-text shadow-lg">
+              <i class="fas fa-user-shield"></i>
+            </div>
+            <div class="flex-1 space-y-1">
+              <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                <h3 class="font-extrabold text-2xl text-white" id="profileUsername">Player</h3>
+                <span id="profileRoleBadge" class="text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 self-center sm:self-auto">Active User</span>
+              </div>
+              <p class="text-xs text-gray-400">Device ID: <span id="profileDeviceId" class="font-mono text-gray-300">...</span></p>
+            </div>
+          </div>
+
+          <!-- Key & Device Information -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <!-- Key Details -->
+            <div class="glass-card p-5 space-y-2">
+              <div class="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2">
+                <i class="fas fa-key theme-text"></i> Access Key Info
+              </div>
+              <div id="profileKeyDisplay" class="text-sm font-semibold text-white font-mono break-all bg-black/40 p-3 rounded-xl border border-white/5">
+                Loading...
+              </div>
+            </div>
+
+            <!-- Device Limit Status -->
+            <div class="glass-card p-5 space-y-2">
+              <div class="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2">
+                <i class="fas fa-mobile-alt theme-text"></i> Device Slot Usage
+              </div>
+              <div id="profileDeviceUsage" class="text-sm font-semibold text-white bg-black/40 p-3 rounded-xl border border-white/5 flex items-center justify-between">
+                <span>Registered Devices:</span>
+                <span id="profileDeviceSlot" class="theme-text font-bold">1 / 1</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Countdown Timer Display -->
+          <div class="glass-card p-6 text-center space-y-4">
+            <div class="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center justify-center gap-2">
+              <i class="fas fa-hourglass-half theme-text"></i> Access Validity Countdown
+            </div>
+
+            <div id="countdownContainer" class="grid grid-cols-3 gap-3 max-w-md mx-auto">
+              <div class="bg-black/50 border border-white/10 p-3.5 rounded-2xl">
+                <div id="countdownDays" class="text-2xl sm:text-3xl font-black text-white">00</div>
+                <div class="text-[10px] uppercase font-bold text-gray-400 mt-1">Days</div>
+              </div>
+              <div class="bg-black/50 border border-white/10 p-3.5 rounded-2xl">
+                <div id="countdownHours" class="text-2xl sm:text-3xl font-black text-white">00</div>
+                <div class="text-[10px] uppercase font-bold text-gray-400 mt-1">Hours</div>
+              </div>
+              <div class="bg-black/50 border border-white/10 p-3.5 rounded-2xl">
+                <div id="countdownMinutes" class="text-2xl sm:text-3xl font-black text-white">00</div>
+                <div class="text-[10px] uppercase font-bold text-gray-400 mt-1">Minutes</div>
+              </div>
+            </div>
+            <div id="masterUnlimitedBanner" class="hidden py-4 text-center">
+              <span class="text-lg font-black theme-text tracking-widest px-6 py-2 rounded-xl bg-white/5 border border-white/10">
+                ⭐ UNLIMITED MASTER ACCESS ⭐
+              </span>
+            </div>
+          </div>
+
+          <!-- Official Support Section -->
+          <div class="glass-card p-6 space-y-4 border border-white/10">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2">
+              <i class="fas fa-headset theme-text"></i> Support & Verification
+            </h4>
+
+            <div class="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-xs font-bold text-red-400 flex items-center gap-2.5">
+              <i class="fas fa-exclamation-triangle text-base"></i>
+              <span>⚠️ DO NOT CALL. MESSAGE ONLY.</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <a href="https://wa.me/+8801858370922" target="_blank" rel="noopener noreferrer" class="flex items-center justify-center gap-2.5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-lg transition">
+                <i class="fab fa-whatsapp text-lg"></i>
+                <span>WhatsApp Support</span>
+              </a>
+              <a href="https://t.me/FFH_PIYASH" target="_blank" rel="noopener noreferrer" class="flex items-center justify-center gap-2.5 py-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-sm shadow-lg transition">
+                <i class="fab fa-telegram-plane text-lg"></i>
+                <span>Telegram Channel</span>
+              </a>
+            </div>
+          </div>
+
+        </div>
+
+      </main>
+    </div>
+
+    <!-- MOBILE BOTTOM NAVIGATION -->
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#090d16]/98 border-t border-white/10 backdrop-blur-xl flex items-center justify-around px-2 py-1">
+      <button type="button" onclick="openTab('home')" id="mobile-nav-home" class="mobile-nav-item active">
+        <i class="fas fa-gamepad text-lg"></i>
+        <span>Home</span>
+      </button>
+      <button type="button" onclick="openTab('emotes')" id="mobile-nav-emotes" class="mobile-nav-item">
+        <i class="fas fa-fire text-lg"></i>
+        <span>Emotes</span>
+      </button>
+      <button type="button" onclick="openTab('profile')" id="mobile-nav-profile" class="mobile-nav-item">
+        <i class="fas fa-user-shield text-lg"></i>
+        <span>Profile</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- MODULE JAVASCRIPT -->
+  <script type="module">
+    // ==========================================
+    // 1. FIREBASE CONFIGURATION (v10.7.1)
+    // ==========================================
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import {
+      getFirestore,
+      collection,
+      getDocs,
+      doc,
+      getDoc,
+      query,
+      where,
+      updateDoc,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDPzPn7SXDQcF2UpSAB2fGpRJCe1VDQd7k",
+      authDomain: "emote-4756e.firebaseapp.com",
+      projectId: "emote-4756e",
+      storageBucket: "emote-4756e.firebasestorage.app",
+      messagingSenderId: "273756315097",
+      appId: "1:273756315097:web:8560f49134cfa775564dc8"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // ==========================================
+    // 2. CONSTANTS & PRELOADED EMOTES
+    // ==========================================
+    const DEFAULT_EMOTE_ID = "909000063";
+
+    const DEFAULT_EMOTES = [
+      { id: "909000063", name: "EVO AK", category: "ALL" },
+      { id: "909051014", name: "Puffy Ride", category: "ALL" },
+      { id: "909033001", name: "EVO M4A1", category: "EVO" },
+      { id: "909000014", name: "Throne", category: "RARE" },
+      { id: "909041003", name: "Inosuke", category: "OLD" },
+      { id: "909050009", name: "Circle", category: "ALL" },
+      { id: "909049012", name: "Flying Guns", category: "RARE" },
+      { id: "909051013", name: "Petals", category: "ALL" },
+      { id: "909051012", name: "Bow", category: "ALL" },
+      { id: "909051010", name: "Motorbikes", category: "ALL" },
+      { id: "909051004", name: "Shower", category: "ALL" },
+      { id: "909051002", name: "Dream", category: "ALL" },
+      { id: "909051001", name: "Angelic", category: "RARE" },
+      { id: "909048015", name: "Paint", category: "ALL" },
+      { id: "909044015", name: "Sword", category: "EVO" },
+      { id: "909041008", name: "Flar", category: "OLD" },
+      { id: "909049003", name: "Owl", category: "RARE" },
+      { id: "909050008", name: "Thor", category: "EVO" },
+      { id: "909049001", name: "Bigdill", category: "ALL" },
+      { id: "909041013", name: "CS GM", category: "OLD" }
+    ];
+
+    // ==========================================
+    // 3. APPLICATION STATE
+    // ==========================================
+    let allEmotes = [...DEFAULT_EMOTES];
+    let selectedEmote = DEFAULT_EMOTE_ID;
+    let selectedCategory = "ALL";
+    let activeBots = [];
+    let selectedBot = null;
+    let currentUserSession = null;
+    let currentKeyData = null;
+    let countdownInterval = null;
+    let isSending = false;
+    let soundEnabled = true;
+    let currentTheme = "yellow";
+    let audioCtx = null;
+    let uidFields = ["uid1", "uid2", "uid3", "uid4", "uid5", "uid6"];
+
+    // ==========================================
+    // 4. AUDIO SYSTEM (Web Audio API)
+    // ==========================================
+    function getAudioContext() {
+      if (!audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) {
+          audioCtx = new AudioContextClass();
+        }
+      }
+      if (audioCtx && audioCtx.state === "suspended") {
+        audioCtx.resume().catch(() => {});
+      }
+      return audioCtx;
+    }
+
+    function playTone(freq, type, duration, gainVal = 0.1) {
+      if (!soundEnabled) return;
+      try {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        gain.gain.setValueAtTime(gainVal, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    window.playClickSound = function() {
+      playTone(600, "sine", 0.08, 0.08);
+    };
+
+    window.playSuccessSound = function() {
+      if (!soundEnabled) return;
+      try {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(523.25, now);
+        osc.frequency.setValueAtTime(659.25, now + 0.09);
+        osc.frequency.setValueAtTime(783.99, now + 0.18);
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(now + 0.35);
+      } catch (e) {}
+    };
+
+    window.playErrorSound = function() {
+      if (!soundEnabled) return;
+      try {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(320, now);
+        osc.frequency.setValueAtTime(220, now + 0.12);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(now + 0.3);
+      } catch (e) {}
+    };
+
+    window.playWarningSound = function() {
+      playTone(440, "sine", 0.18, 0.1);
+    };
+
+    window.toggleSound = function() {
+      soundEnabled = !soundEnabled;
+      localStorage.setItem("mpx_sound_enabled", soundEnabled ? "true" : "false");
+      updateSoundUI();
+      if (soundEnabled) window.playClickSound();
+    };
+
+    function updateSoundUI() {
+      const soundText = soundEnabled ? "Sound ON" : "Sound OFF";
+      const iconClass = soundEnabled ? "fas fa-volume-up" : "fas fa-volume-mute";
+      
+      const sText = document.getElementById("sidebarSoundText");
+      if (sText) sText.innerText = soundText;
+      const sIcon = document.getElementById("sidebarSoundIcon");
+      if (sIcon) sIcon.className = `${iconClass} theme-text`;
+      const mIcon = document.getElementById("mobileSoundIcon");
+      if (mIcon) mIcon.className = iconClass;
+    }
+
+    // ==========================================
+    // 5. TOAST NOTIFICATIONS
+    // ==========================================
+    window.showToast = function(message, type = "info") {
+      const container = document.getElementById("toast-container");
+      if (!container) return;
+
+      const toast = document.createElement("div");
+      toast.className = `toast-item toast-${type}`;
+
+      let icon = "fa-info-circle text-sky-400";
+      if (type === "success") icon = "fa-check-circle text-emerald-400";
+      if (type === "error") icon = "fa-times-circle text-red-400";
+      if (type === "warning") icon = "fa-exclamation-triangle text-amber-400";
+
+      toast.innerHTML = `
+        <i class="fas ${icon} text-lg"></i>
+        <span class="flex-1">${message}</span>
+      `;
+
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.animation = "toastOut 0.3s ease forwards";
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    };
+
+    // ==========================================
+    // 6. THEME MANAGEMENT
+    // ==========================================
+    window.setTheme = function(themeName) {
+      currentTheme = themeName;
+      document.documentElement.setAttribute("data-theme", themeName);
+      localStorage.setItem("mpx_theme", themeName);
+      closeAllThemeMenus();
+      window.playClickSound();
+    };
+
+    window.toggleThemeDropdown = function(menuId) {
+      const menu = document.getElementById(menuId);
+      if (!menu) return;
+      const isHidden = menu.classList.contains("hidden");
+      closeAllThemeMenus();
+      if (isHidden) menu.classList.remove("hidden");
+      window.playClickSound();
+    };
+
+    function closeAllThemeMenus() {
+      const dMenu = document.getElementById("desktopThemeMenu");
+      const mMenu = document.getElementById("mobileThemeMenu");
+      if (dMenu) dMenu.classList.add("hidden");
+      if (mMenu) mMenu.classList.add("hidden");
+    }
+
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest("#desktopThemeMenu") && !e.target.closest("#mobileThemeMenu") && !e.target.closest("[onclick*='toggleThemeDropdown']")) {
+        closeAllThemeMenus();
+      }
+    });
+
+    // ==========================================
+    // 7. DEVICE ID (Stable persistence)
+    // ==========================================
+    function getOrCreateDeviceId() {
+      let deviceId = localStorage.getItem("mpx_device_id");
+      if (!deviceId) {
+        const rand = Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+        deviceId = `mpx_dev_${rand}`;
+        localStorage.setItem("mpx_device_id", deviceId);
+      }
+      return deviceId;
+    }
+
+    function timestampToDate(ts) {
+      if (!ts) return null;
+      if (typeof ts.toDate === "function") return ts.toDate();
+      if (ts instanceof Date) return ts;
+      if (typeof ts === "number") return new Date(ts);
+      if (ts.seconds) return new Date(ts.seconds * 1000);
+      return new Date(ts);
+    }
+
+    // ==========================================
+    // 8. ROBUST INPUT CONTROLS: CLEAR & PASTE
+    // ==========================================
+    window.clearInput = function(id) {
+      const input = document.getElementById(id);
+      if (input) {
+        input.value = "";
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        input.focus();
+        window.playClickSound();
+      }
+    };
+
+    window.pasteInput = async function(id) {
+      const input = document.getElementById(id);
+      if (!input) return;
+
+      try {
+        let pastedText = "";
+
+        // Primary: Modern Async Clipboard API
+        if (navigator.clipboard && typeof navigator.clipboard.readText === "function") {
+          try {
+            pastedText = await navigator.clipboard.readText();
+          } catch (clipErr) {
+            console.warn("Async clipboard read failed:", clipErr);
+          }
+        }
+
+        if (pastedText && pastedText.trim() !== "") {
+          input.value = pastedText.trim();
+          input.dispatchEvent(new Event("input", { bubbles: true }));
+          input.focus();
+          window.playClickSound();
+          window.showToast("Pasted successfully!", "success");
+          return;
+        }
+
+        // Fallback: Focus input so user can paste manually or trigger paste event
+        input.focus();
+        input.select();
+        
+        // Show gentle non-crashing guidance
+        window.showToast("Clipboard access is restricted by browser. Please paste manually (Ctrl+V / Long press).", "warning");
+        window.playWarningSound();
+      } catch (err) {
+        console.warn("Clipboard paste error:", err);
+        window.showToast("Clipboard access is unavailable. Please paste manually.", "warning");
+        window.playWarningSound();
+      }
+    };
+
+    // ==========================================
+    // 9. DYNAMIC UID RENDERING
+    // ==========================================
+    async function loadConfig() {
+      try {
+        const res = await fetch("/api/config");
+        if (res.ok) {
+          const cfg = await res.json();
+          if (cfg.uid_fields && Array.isArray(cfg.uid_fields)) {
+            uidFields = cfg.uid_fields;
+          }
+        }
+      } catch (e) {
+        console.warn("Could not fetch /api/config, using default 6 UID fields.", e);
+        uidFields = ["uid1", "uid2", "uid3", "uid4", "uid5", "uid6"];
+      }
+      renderDynamicUidFields();
+    }
+
+    function renderDynamicUidFields() {
+      const container = document.getElementById("dynamicUidContainer");
+      if (!container) return;
+
+      // Preserve existing values if already typed
+      const savedValues = {};
+      uidFields.forEach(id => {
+        const existing = document.getElementById(id);
+        if (existing) savedValues[id] = existing.value;
+      });
+
+      container.innerHTML = "";
+
+      uidFields.forEach((id, index) => {
+        const num = id.replace("uid", "").toUpperCase();
+        const isRequired = id === "uid1";
+        const val = savedValues[id] || "";
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "space-y-1";
+        wrapper.innerHTML = `
+          <label for="${id}" class="block text-xs font-semibold text-gray-300 mb-1">
+            UID ${num} ${isRequired ? '<span class="text-red-400">*</span>' : '<span class="text-gray-500 text-[10px] font-normal">(Optional)</span>'}
+          </label>
+          <div class="input-wrapper">
+            <input
+              type="text"
+              id="${id}"
+              class="input-field"
+              placeholder="Enter UID ${num}${isRequired ? '' : ' (Optional)'}"
+              value="${val}"
+            >
+            <div class="input-actions">
+              <button
+                type="button"
+                class="action-btn"
+                aria-label="Clear UID ${num}"
+                title="Clear"
+                onclick="clearInput('${id}')"
+              >
+                <i class="fas fa-times-circle"></i>
+              </button>
+              <button
+                type="button"
+                class="action-btn"
+                aria-label="Paste UID ${num}"
+                title="Paste"
+                onclick="pasteInput('${id}')"
+              >
+                <i class="fas fa-paste"></i>
+              </button>
+            </div>
+          </div>
+        `;
+        container.appendChild(wrapper);
+      });
+    }
+
+    // ==========================================
+    // 10. SEND EMOTE FUNCTION (Via Backend Proxy)
+    // ==========================================
+    window.sendEmote = async function() {
+      if (isSending) return;
+
+      // Session verification
+      if (!currentUserSession) {
+        window.showToast("Please login first.", "error");
+        return;
+      }
+
+      if (!currentUserSession.isMaster && currentKeyData) {
+        if (!currentKeyData.active) {
+          window.showToast("Your key is inactive.", "error");
+          logout();
+          return;
+        }
+        if (currentKeyData.expiryDate && Date.now() > currentKeyData.expiryDate.getTime()) {
+          window.showToast("Your access key has expired.", "error");
+          logout();
+          return;
+        }
+      }
+
+      // Input validation
+      const teamCodeInput = document.getElementById("teamCode");
+      const uid1Input = document.getElementById("uid1");
+
+      const teamCode = teamCodeInput ? teamCodeInput.value.trim() : "";
+      const uid1 = uid1Input ? uid1Input.value.trim() : "";
+
+      if (!teamCode) {
+        window.showToast("Please enter Team Code.", "warning");
+        window.playWarningSound();
+        if (teamCodeInput) teamCodeInput.focus();
+        return;
+      }
+
+      if (!uid1) {
+        window.showToast("UID 1 is required.", "warning");
+        window.playWarningSound();
+        if (uid1Input) uid1Input.focus();
+        return;
+      }
+
+      const emoteToSend = selectedEmote || DEFAULT_EMOTE_ID;
+
+      // Build payload
+      const payload = {
+        team_code: teamCode,
+        emote_id: emoteToSend,
+        uid1: uid1
+      };
+
+      // Add all optional UIDs
+      for (let i = 2; i <= 99; i++) {
+        const field = document.getElementById(`uid${i}`);
+        if (field) {
+          payload[`uid${i}`] = field.value.trim();
+        }
+      }
+
+      // Lock UI state
+      isSending = true;
+      updateSendButtonUI(true);
+
+      try {
+        const response = await fetch("/api/send-emote", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success === true) {
+          window.showToast("Emote sent successfully!", "success");
+          window.playSuccessSound();
+        } else {
+          const errorMsg = data.error || data.message || "Emote send failed.";
+          window.showToast(errorMsg, "error");
+          window.playErrorSound();
+        }
+      } catch (err) {
+        console.error("Send Emote Error:", err);
+        window.showToast("Unable to reach backend server. Please try again.", "error");
+        window.playErrorSound();
+      } finally {
+        isSending = false;
+        updateSendButtonUI(false);
+      }
+    };
+
+    function updateSendButtonUI(sending) {
+      const btn = document.getElementById("sendEmoteBtn");
+      const btnText = document.getElementById("sendEmoteBtnText");
+      if (!btn || !btnText) return;
+
+      btn.disabled = sending;
+      if (sending) {
+        btnText.innerHTML = `<i class="fas fa-circle-notch fa-spin mr-2"></i> SENDING...`;
+      } else {
+        btnText.innerText = "SEND EMOTE";
+      }
+    }
+
+    // ==========================================
+    // 11. TAB NAVIGATION
+    // ==========================================
+    window.openTab = function(tabName) {
+      ["home", "emotes", "profile"].forEach(t => {
+        const tabEl = document.getElementById(`tab-${t}`);
+        const dNav = document.getElementById(`desktop-nav-${t}`);
+        const mNav = document.getElementById(`mobile-nav-${t}`);
+
+        if (t === tabName) {
+          if (tabEl) tabEl.classList.add("active");
+          if (dNav) dNav.classList.add("active");
+          if (mNav) mNav.classList.add("active");
+        } else {
+          if (tabEl) tabEl.classList.remove("active");
+          if (dNav) dNav.classList.remove("active");
+          if (mNav) mNav.classList.remove("active");
+        }
+      });
+      window.playClickSound();
+    };
+
+    // ==========================================
+    // 12. EMOTE RENDERING & INSTANT SEND ON CLICK
+    // ==========================================
+    function renderEmotes() {
+      const fullGrid = document.getElementById("fullEmoteGrid");
+      const quickGrid = document.getElementById("quickEmotesGrid");
+      const emptyState = document.getElementById("noEmotesFoundState");
+      const searchInput = document.getElementById("emoteSearchInput");
+
+      const queryTerm = searchInput ? searchInput.value.trim().toLowerCase() : "";
+
+      // Filter emotes with partial matching
+      const filtered = allEmotes.filter(emote => {
+        const matchCategory = selectedCategory === "ALL" || emote.category.toUpperCase() === selectedCategory.toUpperCase();
+        const matchSearch = !queryTerm ||
+          emote.name.toLowerCase().includes(queryTerm) ||
+          emote.id.toLowerCase().includes(queryTerm);
+        return matchCategory && matchSearch;
+      });
+
+      // Update Full Emote Grid
+      if (fullGrid) {
+        fullGrid.innerHTML = "";
+        if (filtered.length === 0) {
+          if (emptyState) emptyState.classList.remove("hidden");
+        } else {
+          if (emptyState) emptyState.classList.add("hidden");
+          filtered.forEach(emote => {
+            const card = createEmoteCardElement(emote, false);
+            fullGrid.appendChild(card);
+          });
+        }
+      }
+
+      // Update Quick Emotes Grid (First 6)
+      if (quickGrid) {
+        quickGrid.innerHTML = "";
+        const quickList = allEmotes.slice(0, 6);
+        quickList.forEach(emote => {
+          const card = createEmoteCardElement(emote, true);
+          quickGrid.appendChild(card);
+        });
+      }
+
+      updateSelectedEmoteUI();
+    }
+
+    function createEmoteCardElement(emote, isQuick) {
+      const card = document.createElement("div");
+      const isSelected = emote.id === selectedEmote;
+      card.className = `emote-card ${isSelected ? 'selected' : ''}`;
+      card.dataset.emoteId = emote.id;
+
+      const imgUrl = `https://cdn.jsdelivr.net/gh/ShahGCreator/icon@main/PNG/${emote.id}.png`;
+
+      card.innerHTML = `
+        <div class="selected-badge"><i class="fas fa-check"></i></div>
+        <div class="${isQuick ? 'w-12 h-12' : 'w-16 h-16'} rounded-xl bg-black/40 p-1 flex items-center justify-center mb-2 overflow-hidden border border-white/5">
+          <img src="${imgUrl}" alt="${emote.name}" class="w-full h-full object-contain pointer-events-none"
+               onerror="this.onerror=null; this.src='https://cdn.jsdelivr.net/gh/ShahGCreator/icon@main/PNG/909000063.png';">
+        </div>
+        <div class="font-bold text-xs text-white truncate max-w-full mb-0.5">${emote.name}</div>
+        <div class="text-[10px] text-gray-400 font-mono">${emote.id}</div>
+        ${!isQuick ? `<span class="mt-1.5 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-white/5 text-gray-300">${emote.category}</span>` : ''}
+      `;
+
+      card.onclick = async (e) => {
+        e.preventDefault();
+        window.playClickSound();
+        selectedEmote = emote.id;
+        updateSelectedEmoteUI();
+        // Send emote immediately when clicked
+        await window.sendEmote();
+      };
+
+      return card;
+    }
+
+    function updateSelectedEmoteUI() {
+      document.querySelectorAll(".emote-card").forEach(card => {
+        if (card.dataset.emoteId === selectedEmote) {
+          card.classList.add("selected");
+        } else {
+          card.classList.remove("selected");
+        }
+      });
+
+      const badge = document.getElementById("selectedEmoteBadge");
+      const current = allEmotes.find(e => e.id === selectedEmote);
+      if (badge && current) {
+        badge.innerText = `${current.name} (${current.id})`;
+      }
+    }
+
+    window.setCategory = function(cat) {
+      selectedCategory = cat;
+      ["ALL", "EVO", "OLD", "RARE"].forEach(c => {
+        const btn = document.getElementById(`cat-${c}`);
+        if (btn) {
+          if (c === cat) btn.classList.add("active");
+          else btn.classList.remove("active");
+        }
+      });
+      window.playClickSound();
+      renderEmotes();
+    };
+
+    window.handleEmoteSearch = function() {
+      renderEmotes();
+    };
+
+    window.clearSearchInput = function() {
+      const input = document.getElementById("emoteSearchInput");
+      if (input) {
+        input.value = "";
+        input.focus();
+        window.playClickSound();
+        renderEmotes();
+      }
+    };
+
+    // ==========================================
+    // 13. BOTS & SETTINGS & NOTICES
+    // ==========================================
+    async function loadBots() {
+      const select = document.getElementById("botSelect");
+      if (!select) return;
+
+      try {
+        const botsRef = collection(db, "bots");
+        const q = query(botsRef, where("active", "==", true));
+        const snap = await getDocs(q);
+
+        activeBots = [];
+        snap.forEach(docSnap => {
+          const data = docSnap.data();
+          activeBots.push({ id: docSnap.id, ...data });
+        });
+
+        if (activeBots.length === 0) {
+          activeBots = [{ id: "BOT-1", name: "BOT-1 (Primary)", active: true }];
+        }
+
+        select.innerHTML = "";
+        activeBots.forEach((bot, index) => {
+          const opt = document.createElement("option");
+          opt.value = bot.id;
+          opt.innerText = bot.name || `BOT-${index + 1}`;
+          select.appendChild(opt);
+        });
+
+        selectedBot = activeBots[0];
+      } catch (err) {
+        console.warn("Bots fetch error:", err);
+        activeBots = [{ id: "BOT-1", name: "BOT-1 (Primary)", active: true }];
+        select.innerHTML = `<option value="BOT-1">BOT-1 (Primary)</option>`;
+        selectedBot = activeBots[0];
+      }
+    }
+
+    window.handleBotChange = function() {
+      const select = document.getElementById("botSelect");
+      if (!select) return;
+      const botId = select.value;
+      selectedBot = activeBots.find(b => b.id === botId) || activeBots[0];
+      window.playClickSound();
+    };
+
+    window.handleRegionChange = function() {
+      window.playClickSound();
+    };
+
+    async function loadNotices() {
+      const container = document.getElementById("noticesArea");
+      if (!container || !currentUserSession) return;
+
+      try {
+        const noticesRef = collection(db, "notices");
+        const snap = await getDocs(noticesRef);
+
+        const list = [];
+        snap.forEach(docSnap => {
+          const d = docSnap.data();
+          if (d.active) {
+            const target = d.target_username || "ALL";
+            if (target === "ALL" || target === currentUserSession.username) {
+              list.push(d);
+            }
+          }
+        });
+
+        if (list.length > 0) {
+          container.innerHTML = "";
+          list.forEach(item => {
+            const nDiv = document.createElement("div");
+            nDiv.className = "p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-200 text-xs flex items-center gap-3";
+            nDiv.innerHTML = `
+              <i class="fas fa-bullhorn text-amber-400 text-base"></i>
+              <span class="flex-1">${item.message || ""}</span>
+            `;
+            container.appendChild(nDiv);
+          });
+          container.classList.remove("hidden");
+        } else {
+          container.classList.add("hidden");
+        }
+      } catch (err) {
+        console.warn("Notices load error:", err);
+        container.classList.add("hidden");
+      }
+    }
+
+    async function loadSettings() {
+      try {
+        const docRef = doc(db, "settings", "config");
+        const snap = await getDoc(docRef);
+        if (snap.exists()) {
+          const config = snap.data();
+          if (config.app_name) {
+            document.title = config.app_name;
+          }
+          if (config.maintenance_mode && (!currentUserSession || !currentUserSession.isMaster)) {
+            showMaintenanceScreen();
+          }
+          if (config.embed_url) {
+            setupEmbedUrl(config.embed_url);
+          }
+        }
+      } catch (err) {
+        console.warn("Settings fetch error:", err);
+      }
+    }
+
+    function showMaintenanceScreen() {
+      const ms = document.getElementById("maintenanceScreen");
+      if (ms) ms.classList.remove("hidden");
+    }
+
+    function setupEmbedUrl(url) {
+      const iframe = document.getElementById("embedIframe");
+      const externalLink = document.getElementById("embedExternalLink");
+      if (iframe) iframe.src = url;
+      if (externalLink) externalLink.href = url;
+    }
+
+    window.openEmbedModal = function() {
+      const modal = document.getElementById("embedModal");
+      if (modal) modal.classList.remove("hidden");
+      window.playClickSound();
+    };
+
+    window.closeEmbedModal = function() {
+      const modal = document.getElementById("embedModal");
+      if (modal) modal.classList.add("hidden");
+      window.playClickSound();
+    };
+
+    // ==========================================
+    // 14. AUTHENTICATION & LOGIN FLOW
+    // ==========================================
+    window.switchLoginMode = function(forceUsername) {
+      const uGroup = document.getElementById("usernameFieldGroup");
+      const banner = document.getElementById("returningUserBanner");
+      const uInput = document.getElementById("loginUsername");
+
+      if (forceUsername) {
+        if (uGroup) uGroup.classList.remove("hidden");
+        if (banner) banner.classList.add("hidden");
+        if (uInput) {
+          uInput.value = "";
+          uInput.focus();
+        }
+      } else {
+        const savedUsername = localStorage.getItem("mpx_saved_username");
+        if (savedUsername) {
+          if (uGroup) uGroup.classList.add("hidden");
+          if (banner) banner.classList.remove("hidden");
+          const sText = document.getElementById("savedUsernameText");
+          if (sText) sText.innerText = savedUsername;
+          if (uInput) uInput.value = savedUsername;
+        } else {
+          if (uGroup) uGroup.classList.remove("hidden");
+          if (banner) banner.classList.add("hidden");
+        }
+      }
+    };
+
+    window.handleLoginSubmit = async function(e) {
+      e.preventDefault();
+      const userField = document.getElementById("loginUsername");
+      const keyField = document.getElementById("loginKey");
+      const submitBtn = document.getElementById("loginSubmitBtn");
+
+      let username = userField ? userField.value.trim() : "";
+      const savedUser = localStorage.getItem("mpx_saved_username");
+      if (!username && savedUser) {
+        username = savedUser;
+      }
+
+      const key = keyField ? keyField.value.trim() : "";
+
+      if (!username) {
+        window.showToast("Username is required.", "warning");
+        window.playWarningSound();
+        if (userField) userField.focus();
+        return;
+      }
+      if (!key) {
+        window.showToast("Access Key is required.", "warning");
+        window.playWarningSound();
+        if (keyField) keyField.focus();
+        return;
+      }
+
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `<i class="fas fa-circle-notch fa-spin mr-2"></i> VERIFYING...`;
+      }
+
+      try {
+        const deviceId = getOrCreateDeviceId();
+
+        // 1. Server-side verification check
+        const authRes = await fetch("/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            username: username,
+            key: key,
+            device_id: deviceId
+          })
+        });
+
+        const authData = await authRes.json();
+
+        // Handle Master Key authentication
+        if (authRes.ok && authData.is_master === true) {
+          currentUserSession = {
+            username: username,
+            key: key,
+            loginTime: Date.now(),
+            isMaster: true
+          };
+          localStorage.setItem("mpx_user_session", JSON.stringify(currentUserSession));
+          localStorage.setItem("mpx_saved_username", username);
+          window.playSuccessSound();
+          window.showToast("Master Access Granted!", "success");
+          enterApp();
+          return;
+        }
+
+        // 2. Normal Firestore Key Verification
+        const keyDocRef = doc(db, "keys", key);
+        const keySnap = await getDoc(keyDocRef);
+
+        if (!keySnap.exists()) {
+          throw new Error("Invalid Access Key.");
+        }
+
+        const data = keySnap.data();
+
+        if (data.active !== true) {
+          throw new Error("This access key is deactivated.");
+        }
+
+        // Username binding check if existing
+        if (data.username && data.username.trim() !== "") {
+          if (data.username.trim().toLowerCase() !== username.toLowerCase()) {
+            throw new Error(`Username does not match key owner (${data.username}).`);
+          }
+        }
+
+        // First login timestamp & Expiry calculation
+        let firstLoginDate = timestampToDate(data.first_login_time);
+        const updates = {};
+
+        if (!firstLoginDate) {
+          updates.first_login_time = serverTimestamp();
+          firstLoginDate = new Date();
+        }
+
+        const validityDays = parseInt(data.validity_days, 10) || 1;
+        const expiryTime = firstLoginDate.getTime() + (validityDays * 24 * 60 * 60 * 1000);
+
+        if (Date.now() > expiryTime) {
+          throw new Error("Your access key has expired.");
+        }
+
+        // Device Limit Verification (Persistent Device Login)
+        const usedDevices = Array.isArray(data.used_devices) ? [...data.used_devices] : [];
+        const deviceLimit = parseInt(data.device_limit, 10) || 1;
+
+        if (!usedDevices.includes(deviceId)) {
+          if (usedDevices.length >= deviceLimit) {
+            throw new Error("This key is already linked to another device.");
+          }
+          usedDevices.push(deviceId);
+          updates.used_devices = usedDevices;
+        }
+
+        if (Object.keys(updates).length > 0) {
+          await updateDoc(keyDocRef, updates);
+        }
+
+        currentKeyData = {
+          ...data,
+          first_login_time: firstLoginDate,
+          expiryDate: new Date(expiryTime),
+          used_devices: usedDevices
+        };
+
+        currentUserSession = {
+          username: username,
+          key: key,
+          loginTime: Date.now(),
+          isMaster: false
+        };
+
+        localStorage.setItem("mpx_user_session", JSON.stringify(currentUserSession));
+        localStorage.setItem("mpx_saved_username", username);
+        window.playSuccessSound();
+        window.showToast("Login Successful!", "success");
+        enterApp();
+
+      } catch (err) {
+        console.error("Login verification failed:", err);
+        window.showToast(err.message || "Login failed. Please check credentials.", "error");
+        window.playErrorSound();
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = `<i class="fas fa-bolt mr-2"></i> LOGIN`;
+        }
+      }
+    };
+
+    // ==========================================
+    // 15. SESSION REVALIDATION & COUNTDOWN
+    // ==========================================
+    async function revalidateSession() {
+      const saved = localStorage.getItem("mpx_user_session");
+      if (!saved) return false;
+
+      try {
+        const session = JSON.parse(saved);
+        if (!session || !session.key || !session.username) {
+          localStorage.removeItem("mpx_user_session");
+          return false;
+        }
+
+        const deviceId = getOrCreateDeviceId();
+
+        // Check with server
+        const authRes = await fetch("/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            username: session.username,
+            key: session.key,
+            device_id: deviceId
+          })
+        });
+
+        const authData = await authRes.json();
+
+        if (authRes.ok && authData.is_master === true) {
+          currentUserSession = session;
+          return true;
+        }
+
+        // Revalidate normal key against Firestore
+        const keyDocRef = doc(db, "keys", session.key);
+        const snap = await getDoc(keyDocRef);
+
+        if (!snap.exists()) {
+          localStorage.removeItem("mpx_user_session");
+          return false;
+        }
+
+        const data = snap.data();
+        if (!data.active) {
+          localStorage.removeItem("mpx_user_session");
+          return false;
+        }
+
+        const firstLoginDate = timestampToDate(data.first_login_time) || new Date(session.loginTime);
+        const validityDays = parseInt(data.validity_days, 10) || 1;
+        const expiryTime = firstLoginDate.getTime() + (validityDays * 24 * 60 * 60 * 1000);
+
+        if (Date.now() > expiryTime) {
+          localStorage.removeItem("mpx_user_session");
+          return false;
+        }
+
+        const usedDevices = Array.isArray(data.used_devices) ? data.used_devices : [];
+        if (!usedDevices.includes(deviceId)) {
+          localStorage.removeItem("mpx_user_session");
+          return false;
+        }
+
+        currentKeyData = {
+          ...data,
+          first_login_time: firstLoginDate,
+          expiryDate: new Date(expiryTime),
+          used_devices: usedDevices
+        };
+
+        currentUserSession = session;
+        return true;
+      } catch (err) {
+        console.warn("Session revalidation error:", err);
+        return false;
+      }
+    }
+
+    function enterApp() {
+      const loginScreen = document.getElementById("loginScreen");
+      const mainApp = document.getElementById("mainApp");
+
+      if (loginScreen) loginScreen.classList.add("hidden");
+      if (mainApp) mainApp.classList.remove("hidden");
+
+      updateProfileUI();
+      loadNotices();
+      startCountdownTimer();
+      renderEmotes();
+    }
+
+    window.logout = function() {
+      if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+      }
+
+      currentUserSession = null;
+      currentKeyData = null;
+      localStorage.removeItem("mpx_user_session");
+
+      const loginScreen = document.getElementById("loginScreen");
+      const mainApp = document.getElementById("mainApp");
+
+      if (mainApp) mainApp.classList.add("hidden");
+      if (loginScreen) loginScreen.classList.remove("hidden");
+
+      // Set returning user mode for same device
+      switchLoginMode(false);
+
+      window.playClickSound();
+      window.showToast("Logged out successfully.", "info");
+    };
+
+    function startCountdownTimer() {
+      if (countdownInterval) clearInterval(countdownInterval);
+
+      updateCountdownDisplay();
+      countdownInterval = setInterval(updateCountdownDisplay, 1000);
+    }
+
+    function updateCountdownDisplay() {
+      const homeVal = document.getElementById("homeValidityDisplay");
+      const cDays = document.getElementById("countdownDays");
+      const cHours = document.getElementById("countdownHours");
+      const cMins = document.getElementById("countdownMinutes");
+      const cContainer = document.getElementById("countdownContainer");
+      const masterBanner = document.getElementById("masterUnlimitedBanner");
+
+      if (!currentUserSession) return;
+
+      if (currentUserSession.isMaster) {
+        if (homeVal) homeVal.innerText = "UNLIMITED";
+        if (cContainer) cContainer.classList.add("hidden");
+        if (masterBanner) masterBanner.classList.remove("hidden");
+        return;
+      }
+
+      if (cContainer) cContainer.classList.remove("hidden");
+      if (masterBanner) masterBanner.classList.add("hidden");
+
+      if (!currentKeyData || !currentKeyData.expiryDate) {
+        if (homeVal) homeVal.innerText = "Active";
+        return;
+      }
+
+      const diff = currentKeyData.expiryDate.getTime() - Date.now();
+
+      if (diff <= 0) {
+        if (homeVal) homeVal.innerText = "EXPIRED";
+        if (cDays) cDays.innerText = "00";
+        if (cHours) cHours.innerText = "00";
+        if (cMins) cMins.innerText = "00";
+        clearInterval(countdownInterval);
+        window.showToast("Your access key has expired.", "error");
+        logout();
+        return;
+      }
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+      const strDays = String(days).padStart(2, "0");
+      const strHours = String(hours).padStart(2, "0");
+      const strMins = String(minutes).padStart(2, "0");
+
+      if (homeVal) homeVal.innerText = `${strDays}d ${strHours}h ${strMins}m`;
+      if (cDays) cDays.innerText = strDays;
+      if (cHours) cHours.innerText = strHours;
+      if (cMins) cMins.innerText = strMins;
+    }
+
+    function updateProfileUI() {
+      if (!currentUserSession) return;
+
+      const deviceId = getOrCreateDeviceId();
+      const username = currentUserSession.username;
+
+      // Home Tab
+      const hUser = document.getElementById("homeUsernameDisplay");
+      if (hUser) hUser.innerText = username;
+
+      // Profile Tab
+      const pUser = document.getElementById("profileUsername");
+      const pDev = document.getElementById("profileDeviceId");
+      const pRole = document.getElementById("profileRoleBadge");
+      const pKey = document.getElementById("profileKeyDisplay");
+      const pSlot = document.getElementById("profileDeviceSlot");
+
+      if (pUser) pUser.innerText = username;
+      if (pDev) pDev.innerText = deviceId;
+
+      if (currentUserSession.isMaster) {
+        if (pRole) pRole.innerText = "Master Administrator";
+        if (pKey) pKey.innerText = "Unlimited Access";
+        if (pSlot) pSlot.innerText = "UNLIMITED";
+      } else {
+        if (pRole) pRole.innerText = "Registered Player";
+        if (pKey) pKey.innerText = currentUserSession.key;
+        const used = (currentKeyData && currentKeyData.used_devices) ? currentKeyData.used_devices.length : 1;
+        const limit = (currentKeyData && currentKeyData.device_limit) ? currentKeyData.device_limit : 1;
+        if (pSlot) pSlot.innerText = `${used} / ${limit}`;
+      }
+    }
+
+    // ==========================================
+    // 16. INITIALIZATION LIFECYCLE
+    // ==========================================
+    async function initializeApplet() {
+      // 1. Load Theme
+      const savedTheme = localStorage.getItem("mpx_theme") || "yellow";
+      setTheme(savedTheme);
+
+      // 2. Load Sound Preference
+      const savedSound = localStorage.getItem("mpx_sound_enabled");
+      soundEnabled = savedSound !== null ? savedSound === "true" : true;
+      updateSoundUI();
+
+      // 3. Persistent Device ID & Returning user setup
+      getOrCreateDeviceId();
+      switchLoginMode(false);
+
+      // 4. Load Safe Config & Dynamic UID fields
+      await loadConfig();
+
+      // 5. Load Settings & Bots
+      await loadSettings();
+      await loadBots();
+
+      // 6. Check Session & Revalidate
+      const isValid = await revalidateSession();
+      if (isValid) {
+        enterApp();
+      }
+
+      // 7. Audio context unlock on interaction
+      document.addEventListener("click", () => {
+        getAudioContext();
+      }, { once: true });
+    }
+
+    initializeApplet();
+  </script>
+</body>
+</html>
