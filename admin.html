@@ -1,0 +1,2063 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MPX PANEL — Admin Control Center</title>
+    
+    <!-- Primary Meta Tags -->
+    <meta name="description" content="MPX PANEL Master Administration Control Hub">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="https://i.ibb.co.com/yc0vCb3S/file-00000000f7cc8207a918ce7ace9eaf03.png" onerror="this.href='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>'">
+
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Rajdhani:wght@600;700;800&display=swap" rel="stylesheet">
+
+    <!-- FontAwesome 6.4.0 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#ef4444',
+                        secondary: '#f97316',
+                        dark: {
+                            950: '#030712',
+                            900: '#0b0f19',
+                            850: '#111827',
+                            800: '#1f2937',
+                            750: '#283344',
+                            700: '#374151'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        gaming: ['Rajdhani', 'sans-serif']
+                    },
+                    boxShadow: {
+                        'neon-red': '0 0 20px rgba(239, 68, 68, 0.45)',
+                        'neon-orange': '0 0 20px rgba(249, 115, 22, 0.45)',
+                        'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.6)'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            --primary: #ef4444;
+            --secondary: #f97316;
+            --bg-dark: #030712;
+            --card-bg: rgba(17, 24, 39, 0.75);
+            --border-glow: rgba(239, 68, 68, 0.25);
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: #f3f4f6;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* Glassmorphism Classes */
+        .glass-panel {
+            background: rgba(17, 24, 39, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-card {
+            background: linear-gradient(135deg, rgba(31, 41, 55, 0.6) 0%, rgba(17, 24, 39, 0.75) 100%);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(239, 68, 68, 0.15);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .glass-card:hover {
+            border-color: rgba(239, 68, 68, 0.45);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(239, 68, 68, 0.2);
+        }
+
+        .glass-input {
+            background: rgba(11, 15, 25, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #ffffff;
+            transition: all 0.2s ease;
+        }
+
+        .glass-input:focus {
+            outline: none;
+            border-color: #ef4444;
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.35);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0b0f19;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #ef4444;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #f97316;
+        }
+
+        /* Floating background particles */
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+            opacity: 0.25;
+            animation: floatParticle 18s infinite linear;
+        }
+
+        @keyframes floatParticle {
+            0% {
+                transform: translateY(0) rotate(0deg);
+                opacity: 0.2;
+            }
+            50% {
+                opacity: 0.45;
+            }
+            100% {
+                transform: translateY(-1000px) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        /* Modal transitions */
+        .modal-backdrop {
+            background: rgba(3, 7, 18, 0.85);
+            backdrop-filter: blur(8px);
+        }
+
+        /* Gradient Text */
+        .text-gradient {
+            background: linear-gradient(135deg, #ef4444 0%, #f97316 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Gaming Title Font */
+        .gaming-title {
+            font-family: 'Rajdhani', sans-serif;
+            letter-spacing: 0.05em;
+        }
+
+        /* Pulse glow animation */
+        @keyframes pulseGlow {
+            0%, 100% { opacity: 0.6; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.05); }
+        }
+        .glow-pulse {
+            animation: pulseGlow 4s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between bg-dark-950 text-gray-100 selection:bg-red-500 selection:text-white relative overflow-x-hidden">
+
+    <!-- Floating Background Particles Container -->
+    <div id="particlesContainer" class="fixed inset-0 overflow-hidden pointer-events-none z-0"></div>
+
+    <!-- Ambient Glowing Orbs -->
+    <div class="fixed top-[-10%] left-[-10%] w-[500px] h-[500px] bg-red-600/10 rounded-full blur-[140px] pointer-events-none z-0 glow-pulse"></div>
+    <div class="fixed bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-orange-600/10 rounded-full blur-[160px] pointer-events-none z-0 glow-pulse" style="animation-delay: 2s;"></div>
+
+    <!-- ========================================== -->
+    <!-- TOAST NOTIFICATION CONTAINER               -->
+    <!-- ========================================== -->
+    <div id="toastContainer" class="fixed top-5 right-5 z-[9999] flex flex-col gap-3 pointer-events-none max-w-sm w-full px-4 sm:px-0"></div>
+
+    <!-- ========================================== -->
+    <!-- SECTION 1: ADMIN LOGIN SCREEN (PRE-AUTH)  -->
+    <!-- ========================================== -->
+    <div id="loginScreen" class="min-h-screen w-full flex items-center justify-center p-4 relative z-10">
+        <div class="glass-panel w-full max-w-md p-8 rounded-2xl border border-red-500/20 shadow-2xl relative overflow-hidden">
+            <!-- Top Gradient Line -->
+            <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-600 via-orange-500 to-red-600"></div>
+
+            <div class="text-center mb-8">
+                <!-- Logo -->
+                <div class="relative w-24 h-24 mx-auto mb-4 group">
+                    <div class="absolute inset-0 bg-red-500/30 rounded-2xl blur-lg group-hover:bg-red-500/50 transition-all"></div>
+                    <img id="loginLogo" 
+                         src="https://i.ibb.co.com/yc0vCb3S/file-00000000f7cc8207a918ce7ace9eaf03.png" 
+                         alt="MPX PANEL Logo" 
+                         class="relative w-24 h-24 object-contain rounded-2xl border border-red-500/30 p-1.5 bg-dark-900 shadow-neon-red"
+                         onerror="handleLogoFallback(this)">
+                </div>
+
+                <h1 class="gaming-title text-3xl font-extrabold tracking-wider text-white">MPX <span class="text-gradient">PANEL</span></h1>
+                <div class="inline-flex items-center gap-2 px-3 py-1 mt-2 rounded-full bg-red-950/60 border border-red-500/30 text-xs font-semibold tracking-widest text-red-400 uppercase">
+                    <span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
+                    Admin Control Center
+                </div>
+            </div>
+
+            <!-- Login Form -->
+            <form id="adminLoginForm" class="space-y-6">
+                <div>
+                    <label for="adminKeyInput" class="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+                        <i class="fas fa-shield-alt text-red-500 mr-1.5"></i> Master Key
+                    </label>
+                    <div class="relative">
+                        <input type="password" 
+                               id="adminKeyInput" 
+                               name="key"
+                               required 
+                               placeholder="Enter master password..."
+                               class="glass-input w-full px-4 py-3.5 pl-11 pr-12 rounded-xl text-sm font-medium focus:ring-2 focus:ring-red-500 focus:border-transparent placeholder-gray-500">
+                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                            <i class="fas fa-lock text-sm"></i>
+                        </div>
+                        <button type="button" 
+                                id="togglePasswordBtn" 
+                                class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-red-400 transition-colors focus:outline-none">
+                            <i class="fas fa-eye text-sm" id="passwordEyeIcon"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit" 
+                        id="loginSubmitBtn" 
+                        class="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white font-bold text-sm tracking-wider uppercase transition-all duration-300 shadow-neon-red hover:shadow-neon-orange active:scale-[0.99] flex items-center justify-center gap-2">
+                    <span id="loginBtnText">Authorize Admin Access</span>
+                    <i class="fas fa-arrow-right text-xs" id="loginBtnIcon"></i>
+                    <i class="fas fa-spinner fa-spin hidden" id="loginSpinner"></i>
+                </button>
+            </form>
+
+            <div class="mt-8 text-center border-t border-gray-800/80 pt-4 text-xs text-gray-500 flex items-center justify-center gap-1.5">
+                <i class="fas fa-user-shield text-red-500"></i>
+                <span>Protected by Server-Side Encrypted Session</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- SECTION 2: MAIN ADMIN DASHBOARD (AUTHED)  -->
+    <!-- ========================================== -->
+    <div id="adminApp" class="hidden min-h-screen flex flex-col md:flex-row relative z-10">
+        
+        <!-- SIDEBAR (Desktop ~260px & Mobile Drawer) -->
+        <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-64 bg-dark-900/95 border-r border-red-500/20 backdrop-blur-xl transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out flex flex-col justify-between shadow-2xl">
+            <!-- Top Branding -->
+            <div>
+                <div class="p-6 border-b border-gray-800/80 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <img src="https://i.ibb.co.com/yc0vCb3S/file-00000000f7cc8207a918ce7ace9eaf03.png" 
+                             alt="MPX Logo" 
+                             class="w-10 h-10 object-contain rounded-xl border border-red-500/40 p-1 bg-dark-950 shadow-neon-red"
+                             onerror="handleLogoFallback(this)">
+                        <div>
+                            <h2 class="gaming-title text-xl font-extrabold text-white leading-tight">MPX <span class="text-gradient">ADMIN</span></h2>
+                            <p class="text-[10px] uppercase tracking-widest text-red-400 font-bold">Control Engine</p>
+                        </div>
+                    </div>
+                    <!-- Mobile Close Sidebar Button -->
+                    <button id="closeSidebarBtn" class="md:hidden text-gray-400 hover:text-white p-2 rounded-lg">
+                        <i class="fas fa-times text-lg"></i>
+                    </button>
+                </div>
+
+                <!-- Navigation Links -->
+                <nav class="p-4 space-y-1.5" id="navLinksContainer">
+                    <button data-tab="dashboard" class="nav-item w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 text-white bg-red-600/20 border border-red-500/40 shadow-neon-red">
+                        <i class="fas fa-chart-line text-red-400 w-5 text-center"></i>
+                        <span>Dashboard</span>
+                    </button>
+                    <button data-tab="keys" class="nav-item w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 text-gray-400 hover:text-white hover:bg-white/5 border border-transparent">
+                        <i class="fas fa-key text-gray-400 w-5 text-center"></i>
+                        <span>Keys Management</span>
+                    </button>
+                    <button data-tab="bots" class="nav-item w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 text-gray-400 hover:text-white hover:bg-white/5 border border-transparent">
+                        <i class="fas fa-robot text-gray-400 w-5 text-center"></i>
+                        <span>Bots Hub</span>
+                    </button>
+                    <button data-tab="emotes" class="nav-item w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 text-gray-400 hover:text-white hover:bg-white/5 border border-transparent">
+                        <i class="fas fa-icons text-gray-400 w-5 text-center"></i>
+                        <span>Emotes Catalog</span>
+                    </button>
+                    <button data-tab="notices" class="nav-item w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 text-gray-400 hover:text-white hover:bg-white/5 border border-transparent">
+                        <i class="fas fa-bullhorn text-gray-400 w-5 text-center"></i>
+                        <span>Broadcasts</span>
+                    </button>
+                    <button data-tab="settings" class="nav-item w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 text-gray-400 hover:text-white hover:bg-white/5 border border-transparent">
+                        <i class="fas fa-sliders-h text-gray-400 w-5 text-center"></i>
+                        <span>System Settings</span>
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Bottom Sidebar Info & Logout -->
+            <div class="p-4 border-t border-gray-800/80 space-y-3">
+                <div class="flex items-center gap-3 px-3 py-2 rounded-xl bg-dark-950/80 border border-gray-800">
+                    <div class="w-8 h-8 rounded-lg bg-red-600/20 border border-red-500/30 flex items-center justify-center text-red-400">
+                        <i class="fas fa-user-shield text-xs"></i>
+                    </div>
+                    <div class="overflow-hidden">
+                        <p class="text-xs font-bold text-white truncate">Super Administrator</p>
+                        <p class="text-[10px] text-emerald-400 flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                            Online (Session Active)
+                        </p>
+                    </div>
+                </div>
+
+                <button id="adminLogoutBtn" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-red-400 hover:text-white bg-red-950/40 hover:bg-red-600 border border-red-800/50 hover:border-red-500 transition-all duration-200 uppercase tracking-wider">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Log Out</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- BACKDROP for Mobile Sidebar -->
+        <div id="sidebarBackdrop" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-30 hidden md:hidden"></div>
+
+        <!-- MAIN CONTENT AREA -->
+        <div class="flex-1 md:ml-64 flex flex-col min-h-screen">
+            
+            <!-- TOP BAR -->
+            <header class="sticky top-0 z-20 glass-panel border-b border-gray-800/80 px-4 sm:px-8 py-4 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <button id="openSidebarBtn" class="md:hidden text-gray-300 hover:text-white p-2 rounded-lg bg-dark-900 border border-gray-800">
+                        <i class="fas fa-bars text-lg"></i>
+                    </button>
+                    <div>
+                        <h1 id="pageTitle" class="text-lg sm:text-xl font-extrabold text-white gaming-title">Dashboard Overview</h1>
+                        <p class="text-xs text-gray-400 hidden sm:block">Live management system for MPX PANEL backend infrastructure</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <!-- Quick Refresh Button -->
+                    <button id="refreshDataBtn" title="Reload System Data" class="px-3 py-2 rounded-xl bg-dark-900 border border-gray-700/60 hover:border-red-500 text-gray-300 hover:text-white text-xs font-medium flex items-center gap-2 transition-all">
+                        <i class="fas fa-sync-alt" id="refreshIcon"></i>
+                        <span class="hidden sm:inline">Sync Data</span>
+                    </button>
+                    <!-- Server Status Indicator -->
+                    <div class="px-3 py-1.5 rounded-xl bg-dark-900 border border-emerald-500/30 text-emerald-400 text-xs font-semibold flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span class="hidden sm:inline">Vercel Backend:</span> Live
+                    </div>
+                </div>
+            </header>
+
+            <!-- MAIN VIEW CONTAINER -->
+            <main class="p-4 sm:p-8 flex-1">
+                
+                <!-- ============================================== -->
+                <!-- VIEW 1: DASHBOARD OVERVIEW                     -->
+                <!-- ============================================== -->
+                <section id="tab-dashboard" class="tab-view space-y-8">
+                    <!-- 4 STAT CARDS -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                        <!-- Stat 1: Keys -->
+                        <div class="glass-card p-5 rounded-2xl relative overflow-hidden border-l-4 border-l-red-500">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-xs font-bold uppercase tracking-wider text-gray-400">Total Keys</p>
+                                    <h3 id="statTotalKeys" class="text-3xl font-black text-white gaming-title mt-1">--</h3>
+                                </div>
+                                <div class="w-12 h-12 rounded-xl bg-red-500/20 border border-red-500/40 flex items-center justify-center text-red-400 text-xl shadow-neon-red">
+                                    <i class="fas fa-key"></i>
+                                </div>
+                            </div>
+                            <div class="mt-4 flex items-center justify-between text-[11px] text-gray-400 pt-3 border-t border-gray-800">
+                                <span>Active in database</span>
+                                <span id="statActiveKeysSub" class="text-emerald-400 font-bold">-- active</span>
+                            </div>
+                        </div>
+
+                        <!-- Stat 2: Active Bots -->
+                        <div class="glass-card p-5 rounded-2xl relative overflow-hidden border-l-4 border-l-orange-500">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-xs font-bold uppercase tracking-wider text-gray-400">Active Bots</p>
+                                    <h3 id="statActiveBots" class="text-3xl font-black text-white gaming-title mt-1">--</h3>
+                                </div>
+                                <div class="w-12 h-12 rounded-xl bg-orange-500/20 border border-orange-500/40 flex items-center justify-center text-orange-400 text-xl shadow-neon-orange">
+                                    <i class="fas fa-robot"></i>
+                                </div>
+                            </div>
+                            <div class="mt-4 flex items-center justify-between text-[11px] text-gray-400 pt-3 border-t border-gray-800">
+                                <span>Bot Instances</span>
+                                <span id="statBotsRegionSub" class="text-orange-400 font-bold">Global Ready</span>
+                            </div>
+                        </div>
+
+                        <!-- Stat 3: Total Emotes -->
+                        <div class="glass-card p-5 rounded-2xl relative overflow-hidden border-l-4 border-l-amber-500">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-xs font-bold uppercase tracking-wider text-gray-400">Total Emotes</p>
+                                    <h3 id="statTotalEmotes" class="text-3xl font-black text-white gaming-title mt-1">--</h3>
+                                </div>
+                                <div class="w-12 h-12 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 text-xl">
+                                    <i class="fas fa-icons"></i>
+                                </div>
+                            </div>
+                            <div class="mt-4 flex items-center justify-between text-[11px] text-gray-400 pt-3 border-t border-gray-800">
+                                <span>Catalog items</span>
+                                <span class="text-amber-400 font-bold">EVO & Special</span>
+                            </div>
+                        </div>
+
+                        <!-- Stat 4: Active Notices -->
+                        <div class="glass-card p-5 rounded-2xl relative overflow-hidden border-l-4 border-l-blue-500">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-xs font-bold uppercase tracking-wider text-gray-400">Active Notices</p>
+                                    <h3 id="statActiveNotices" class="text-3xl font-black text-white gaming-title mt-1">--</h3>
+                                </div>
+                                <div class="w-12 h-12 rounded-xl bg-blue-500/20 border border-blue-500/40 flex items-center justify-center text-blue-400 text-xl">
+                                    <i class="fas fa-bullhorn"></i>
+                                </div>
+                            </div>
+                            <div class="mt-4 flex items-center justify-between text-[11px] text-gray-400 pt-3 border-t border-gray-800">
+                                <span>Broadcasts</span>
+                                <span class="text-blue-400 font-bold">System Wide</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- QUICK ACTIONS ROW -->
+                    <div class="glass-card p-6 rounded-2xl">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                            <div>
+                                <h3 class="text-lg font-bold text-white gaming-title">Quick Action Hub</h3>
+                                <p class="text-xs text-gray-400">Immediate management controls for keys, bots, and broadcasts</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <button onclick="openModal('generateKeyModal')" class="p-4 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold text-sm tracking-wider uppercase transition-all shadow-neon-red flex items-center justify-center gap-3">
+                                <i class="fas fa-plus-circle text-lg"></i>
+                                <span>Generate Key</span>
+                            </button>
+                            <button onclick="openModal('addBotModal')" class="p-4 rounded-xl bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-500 hover:to-orange-600 text-white font-bold text-sm tracking-wider uppercase transition-all shadow-neon-orange flex items-center justify-center gap-3">
+                                <i class="fas fa-robot text-lg"></i>
+                                <span>Add Bot Instance</span>
+                            </button>
+                            <button onclick="openModal('sendNoticeModal')" class="p-4 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white font-bold text-sm tracking-wider uppercase transition-all flex items-center justify-center gap-3">
+                                <i class="fas fa-paper-plane text-lg"></i>
+                                <span>Broadcast Notice</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- RECENT KEYS PREVIEW TABLE -->
+                    <div class="glass-card p-6 rounded-2xl">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-base font-bold text-white gaming-title">Recent License Keys</h3>
+                            <button onclick="switchTab('keys')" class="text-xs font-bold text-red-400 hover:text-red-300 flex items-center gap-1">
+                                <span>View All Keys</span>
+                                <i class="fas fa-chevron-right text-[10px]"></i>
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs text-gray-300">
+                                <thead class="bg-dark-900/80 text-gray-400 uppercase text-[10px] tracking-wider border-b border-gray-800">
+                                    <tr>
+                                        <th class="p-3">Key</th>
+                                        <th class="p-3">Username</th>
+                                        <th class="p-3">Validity</th>
+                                        <th class="p-3">Devices</th>
+                                        <th class="p-3">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recentKeysTableBody" class="divide-y divide-gray-800/60">
+                                    <tr>
+                                        <td colspan="5" class="p-4 text-center text-gray-500">Loading recent keys...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ============================================== -->
+                <!-- VIEW 2: KEYS MANAGEMENT                       -->
+                <!-- ============================================== -->
+                <section id="tab-keys" class="tab-view hidden space-y-6">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 glass-panel p-6 rounded-2xl">
+                        <div>
+                            <h2 class="text-xl font-bold text-white gaming-title">License Keys Manager</h2>
+                            <p class="text-xs text-gray-400">Generate, revoke, extend and audit user authorization keys</p>
+                        </div>
+                        <button onclick="openModal('generateKeyModal')" class="px-5 py-3 rounded-xl bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white font-bold text-xs uppercase tracking-wider shadow-neon-red flex items-center gap-2">
+                            <i class="fas fa-plus"></i>
+                            <span>Generate New Key</span>
+                        </button>
+                    </div>
+
+                    <!-- Search & Filter Bar -->
+                    <div class="glass-card p-4 rounded-xl flex flex-col sm:flex-row gap-3">
+                        <div class="relative flex-1">
+                            <input type="text" 
+                                   id="keySearchInput" 
+                                   placeholder="Search by key string or username..."
+                                   class="glass-input w-full px-4 py-2.5 pl-10 rounded-xl text-xs">
+                            <i class="fas fa-search absolute left-3.5 top-3.5 text-gray-400 text-xs"></i>
+                        </div>
+                        <select id="keyStatusFilter" class="glass-input px-4 py-2.5 rounded-xl text-xs font-semibold">
+                            <option value="ALL">All Statuses</option>
+                            <option value="ACTIVE">Active Only</option>
+                            <option value="REVOKED">Revoked Only</option>
+                        </select>
+                    </div>
+
+                    <!-- Main Keys Table -->
+                    <div class="glass-card rounded-2xl overflow-hidden shadow-xl">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs text-gray-300">
+                                <thead class="bg-dark-900 text-gray-400 uppercase text-[10px] tracking-wider border-b border-gray-800">
+                                    <tr>
+                                        <th class="p-4">Access Key</th>
+                                        <th class="p-4">Username</th>
+                                        <th class="p-4">Validity Days</th>
+                                        <th class="p-4">Device Usage</th>
+                                        <th class="p-4">Status</th>
+                                        <th class="p-4 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="keysTableBody" class="divide-y divide-gray-800/80">
+                                    <tr>
+                                        <td colspan="6" class="p-6 text-center text-gray-500">Loading keys database...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ============================================== -->
+                <!-- VIEW 3: BOTS MANAGEMENT                       -->
+                <!-- ============================================== -->
+                <section id="tab-bots" class="tab-view hidden space-y-6">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 glass-panel p-6 rounded-2xl">
+                        <div>
+                            <h2 class="text-xl font-bold text-white gaming-title">Bots Infrastructure</h2>
+                            <p class="text-xs text-gray-400">Configure bot API endpoints, regional routing, and active dispatchers</p>
+                        </div>
+                        <button onclick="openModal('addBotModal')" class="px-5 py-3 rounded-xl bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white font-bold text-xs uppercase tracking-wider shadow-neon-orange flex items-center gap-2">
+                            <i class="fas fa-plus"></i>
+                            <span>Add New Bot</span>
+                        </button>
+                    </div>
+
+                    <!-- Bots Grid -->
+                    <div id="botsGridContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                        <div class="col-span-full p-8 text-center text-gray-500 glass-card rounded-2xl">
+                            <i class="fas fa-spinner fa-spin text-2xl text-orange-500 mb-2"></i>
+                            <p>Loading bot instances...</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ============================================== -->
+                <!-- VIEW 4: EMOTES CATALOG                        -->
+                <!-- ============================================== -->
+                <section id="tab-emotes" class="tab-view hidden space-y-6">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 glass-panel p-6 rounded-2xl">
+                        <div>
+                            <h2 class="text-xl font-bold text-white gaming-title">Emotes Library</h2>
+                            <p class="text-xs text-gray-400">Manage catalog emotes, images, and category identifiers</p>
+                        </div>
+                        <button onclick="openModal('addEmoteModal')" class="px-5 py-3 rounded-xl bg-gradient-to-r from-amber-600 to-red-600 hover:from-amber-500 hover:to-red-500 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2">
+                            <i class="fas fa-plus"></i>
+                            <span>Add New Emote</span>
+                        </button>
+                    </div>
+
+                    <!-- Filter & Search Bar -->
+                    <div class="glass-card p-4 rounded-xl flex flex-col sm:flex-row gap-3">
+                        <div class="relative flex-1">
+                            <input type="text" 
+                                   id="emoteSearchInput" 
+                                   placeholder="Search by emote ID or name..."
+                                   class="glass-input w-full px-4 py-2.5 pl-10 rounded-xl text-xs">
+                            <i class="fas fa-search absolute left-3.5 top-3.5 text-gray-400 text-xs"></i>
+                        </div>
+                        <select id="emoteCategoryFilter" class="glass-input px-4 py-2.5 rounded-xl text-xs font-semibold">
+                            <option value="ALL">All Categories</option>
+                            <option value="EVO">EVO Emotes</option>
+                            <option value="OLD">OLD Emotes</option>
+                            <option value="RARE">RARE Emotes</option>
+                        </select>
+                    </div>
+
+                    <!-- Emotes Grid -->
+                    <div id="emotesGridContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                        <div class="col-span-full p-8 text-center text-gray-500 glass-card rounded-2xl">
+                            <i class="fas fa-spinner fa-spin text-2xl text-amber-500 mb-2"></i>
+                            <p>Loading emotes library...</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ============================================== -->
+                <!-- VIEW 5: BROADCAST NOTICES                     -->
+                <!-- ============================================== -->
+                <section id="tab-notices" class="tab-view hidden space-y-6">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 glass-panel p-6 rounded-2xl">
+                        <div>
+                            <h2 class="text-xl font-bold text-white gaming-title">Broadcast Messages</h2>
+                            <p class="text-xs text-gray-400">Push system notices or targeted notifications to clients</p>
+                        </div>
+                        <button onclick="openModal('sendNoticeModal')" class="px-5 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2">
+                            <i class="fas fa-paper-plane"></i>
+                            <span>Create New Broadcast</span>
+                        </button>
+                    </div>
+
+                    <!-- Notices History List -->
+                    <div id="noticesListContainer" class="space-y-4">
+                        <div class="p-8 text-center text-gray-500 glass-card rounded-2xl">
+                            <i class="fas fa-spinner fa-spin text-2xl text-blue-500 mb-2"></i>
+                            <p>Loading broadcast history...</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ============================================== -->
+                <!-- VIEW 6: SYSTEM SETTINGS                       -->
+                <!-- ============================================== -->
+                <section id="tab-settings" class="tab-view hidden space-y-6">
+                    <div class="glass-panel p-6 rounded-2xl">
+                        <h2 class="text-xl font-bold text-white gaming-title">System Settings & Configuration</h2>
+                        <p class="text-xs text-gray-400">Global parameters for client application behavior and operational status</p>
+                    </div>
+
+                    <div class="glass-card p-6 sm:p-8 rounded-2xl max-w-2xl">
+                        <form id="systemSettingsForm" class="space-y-6">
+                            <div>
+                                <label for="settingAppName" class="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-2">
+                                    Application Name
+                                </label>
+                                <input type="text" 
+                                       id="settingAppName" 
+                                       required
+                                       value="MPX PANEL"
+                                       class="glass-input w-full px-4 py-3 rounded-xl text-sm font-medium">
+                            </div>
+
+                            <div>
+                                <label for="settingEmbedUrl" class="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-2">
+                                    Embed / Live Stream URL (Optional)
+                                </label>
+                                <input type="url" 
+                                       id="settingEmbedUrl" 
+                                       placeholder="https://youtube.com/embed/..."
+                                       class="glass-input w-full px-4 py-3 rounded-xl text-sm font-medium">
+                            </div>
+
+                            <div class="pt-4 border-t border-gray-800 flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-bold text-white">Maintenance Mode</p>
+                                    <p class="text-xs text-gray-400">When enabled, client panels display a maintenance alert</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="settingMaintenanceMode" class="sr-only peer">
+                                    <div class="w-12 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
+                                </label>
+                            </div>
+
+                            <div class="pt-4">
+                                <button type="submit" 
+                                        id="saveSettingsBtn"
+                                        class="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white font-bold text-xs uppercase tracking-wider shadow-neon-red flex items-center justify-center gap-2">
+                                    <i class="fas fa-save"></i>
+                                    <span>Save Configuration</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <!-- ======================================================= -->
+    <!-- MODALS SECTION                                          -->
+    <!-- ======================================================= -->
+
+    <!-- MODAL 1: GENERATE KEY -->
+    <div id="generateKeyModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop hidden">
+        <div class="glass-panel w-full max-w-lg p-6 sm:p-8 rounded-2xl border border-red-500/30 shadow-2xl relative">
+            <div class="flex items-center justify-between pb-4 border-b border-gray-800">
+                <h3 class="text-lg font-bold text-white gaming-title flex items-center gap-2">
+                    <i class="fas fa-key text-red-500"></i>
+                    <span>Generate Access Key</span>
+                </h3>
+                <button onclick="closeModal('generateKeyModal')" class="text-gray-400 hover:text-white p-1">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <form id="generateKeyForm" class="space-y-4 mt-5">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
+                        Username (Optional)
+                    </label>
+                    <input type="text" id="genUsername" placeholder="e.g. GamerPro99" class="glass-input w-full px-4 py-2.5 rounded-xl text-xs">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
+                        Custom Key (Leave blank to auto-generate)
+                    </label>
+                    <input type="text" id="genCustomKey" placeholder="e.g. VIP-8X99A" class="glass-input w-full px-4 py-2.5 rounded-xl text-xs font-mono">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
+                            Validity Days
+                        </label>
+                        <input type="number" id="genValidity" value="7" min="1" max="3650" required class="glass-input w-full px-4 py-2.5 rounded-xl text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
+                            Device Limit
+                        </label>
+                        <input type="number" id="genDeviceLimit" value="2" min="1" max="100" required class="glass-input w-full px-4 py-2.5 rounded-xl text-xs">
+                    </div>
+                </div>
+
+                <!-- Result Display Container (Hidden Initially) -->
+                <div id="keyResultBox" class="hidden p-4 rounded-xl bg-red-950/40 border border-red-500/40 space-y-2">
+                    <p class="text-[11px] font-bold text-red-300 uppercase">Generated Key:</p>
+                    <div class="flex items-center justify-between gap-2 bg-dark-950 p-2.5 rounded-lg border border-red-500/30">
+                        <span id="generatedKeyText" class="font-mono text-sm font-bold text-white select-all"></span>
+                        <button type="button" id="copyGenKeyBtn" class="px-3 py-1 bg-red-600 hover:bg-red-500 text-white rounded text-xs font-bold flex items-center gap-1">
+                            <i class="fas fa-copy"></i> Copy
+                        </button>
+                    </div>
+                </div>
+
+                <div class="pt-3 flex gap-3">
+                    <button type="button" onclick="closeModal('generateKeyModal')" class="flex-1 py-3 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold text-xs uppercase">
+                        Close
+                    </button>
+                    <button type="submit" id="genSubmitBtn" class="flex-1 py-3 rounded-xl bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white font-bold text-xs uppercase shadow-neon-red flex items-center justify-center gap-2">
+                        <span id="genBtnText">Create Key</span>
+                        <i class="fas fa-spinner fa-spin hidden" id="genSpinner"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 2: EXTEND KEY -->
+    <div id="extendKeyModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop hidden">
+        <div class="glass-panel w-full max-w-md p-6 rounded-2xl border border-red-500/30 shadow-2xl relative">
+            <div class="flex items-center justify-between pb-4 border-b border-gray-800">
+                <h3 class="text-lg font-bold text-white gaming-title flex items-center gap-2">
+                    <i class="fas fa-calendar-plus text-orange-500"></i>
+                    <span>Extend Key Validity</span>
+                </h3>
+                <button onclick="closeModal('extendKeyModal')" class="text-gray-400 hover:text-white p-1">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <form id="extendKeyForm" class="space-y-4 mt-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
+                        Target Key
+                    </label>
+                    <input type="text" id="extendTargetKey" readonly class="glass-input w-full px-4 py-2.5 rounded-xl text-xs font-mono bg-dark-900 text-gray-400">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
+                        Extra Days to Add
+                    </label>
+                    <input type="number" id="extendDays" value="7" min="1" max="3650" required class="glass-input w-full px-4 py-2.5 rounded-xl text-xs">
+                </div>
+
+                <div class="pt-3 flex gap-3">
+                    <button type="button" onclick="closeModal('extendKeyModal')" class="flex-1 py-3 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold text-xs uppercase">
+                        Cancel
+                    </button>
+                    <button type="submit" id="extendSubmitBtn" class="flex-1 py-3 rounded-xl bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white font-bold text-xs uppercase shadow-neon-orange flex items-center justify-center gap-2">
+                        <span>Extend Validity</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 3: ADD / EDIT BOT -->
+    <div id="addBotModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop hidden">
+        <div class="glass-panel w-full max-w-lg p-6 sm:p-8 rounded-2xl border border-orange-500/30 shadow-2xl relative">
+            <div class="flex items-center justify-between pb-4 border-b border-gray-800">
+                <h3 class="text-lg font-bold text-white gaming-title flex items-center gap-2">
+                    <i class="fas fa-robot text-orange-500"></i>
+                    <span id="botModalTitle">Add Bot Instance</span>
+                </h3>
+                <button onclick="closeModal('addBotModal')" class="text-gray-400 hover:text-white p-1">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <form id="addBotForm" class="space-y-4 mt-5">
+                <input type="hidden" id="editBotId" value="">
+
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
+                        Bot Identifier Name
+                    </label>
+                    <input type="text" id="botNameInput" required placeholder="e.g. BOT-PRO-1" class="glass-input w-full px-4 py-2.5 rounded-xl text-xs">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
+                        API URL Endpoint Template
+                    </label>
+                    <input type="text" 
+                           id="botUrlInput" 
+                           required 
+                           placeholder="https://example.com/api?uid1={uid1}&uid2={uid2}&uid3={uid3}&team_code={team_code}&emote_id={emote_id}" 
+                           class="glass-input w-full px-4 py-2.5 rounded-xl text-xs font-mono">
+                    <p class="text-[10px] text-gray-400 mt-1">Placeholders: {uid1}, {uid2}, {team_code}, {emote_id}</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
+                            Server Region
+                        </label>
+                        <select id="botRegionSelect" class="glass-input w-full px-4 py-2.5 rounded-xl text-xs">
+                            <option value="ALL">ALL Regions</option>
+                            <option value="BD">BD</option>
+                            <option value="IND">IND</option>
+                            <option value="Sylhet">Sylhet</option>
+                            <option value="PK">PK</option>
+                            <option value="BR">BR</option>
+                            <option value="US">US</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
+                            Bot Status
+                        </label>
+                        <select id="botActiveSelect" class="glass-input w-full px-4 py-2.5 rounded-xl text-xs">
+                            <option value="true">Active / Online</option>
+                            <option value="false">Disabled / Offline</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
+                        Description (Optional)
+                    </label>
+                    <input type="text" id="botDescInput" placeholder="e.g. Ultra fast dedicated cluster node" class="glass-input w-full px-4 py-2.5 rounded-xl text-xs">
+                </div>
+
+                <div class="pt-3 flex gap-3">
+                    <button type="button" onclick="closeModal('addBotModal')" class="flex-1 py-3 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold text-xs uppercase">
+                        Cancel
+                    </button>
+                    <button type="submit" id="botSubmitBtn" class="flex-1 py-3 rounded-xl bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white font-bold text-xs uppercase shadow-neon-orange flex items-center justify-center gap-2">
+                        <span id="botBtnText">Save Bot</span>
+                        <i class="fas fa-spinner fa-spin hidden" id="botSpinner"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 4: ADD EMOTE -->
+    <div id="addEmoteModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop hidden">
+        <div class="glass-panel w-full max-w-md p-6 sm:p-8 rounded-2xl border border-amber-500/30 shadow-2xl relative">
+            <div class="flex items-center justify-between pb-4 border-b border-gray-800">
+                <h3 class="text-lg font-bold text-white gaming-title flex items-center gap-2">
+                    <i class="fas fa-icons text-amber-500"></i>
+                    <span>Register Emote</span>
+                </h3>
+                <button onclick="closeModal('addEmoteModal')" class="text-gray-400 hover:text-white p-1">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <form id="addEmoteForm" class="space-y-4 mt-5">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
+                        Emote Numeric ID
+                    </label>
+                    <input type="text" id="emoteIdInput" required placeholder="e.g. 909000063" class="glass-input w-full px-4 py-2.5 rounded-xl text-xs font-mono">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
+                        Emote Display Name
+                    </label>
+                    <input type="text" id="emoteNameInput" required placeholder="e.g. EVO AK Draconian" class="glass-input w-full px-4 py-2.5 rounded-xl text-xs">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
+                        Category Classification
+                    </label>
+                    <select id="emoteCategorySelect" class="glass-input w-full px-4 py-2.5 rounded-xl text-xs">
+                        <option value="ALL">ALL Categories</option>
+                        <option value="EVO">EVO Weapon / Emote</option>
+                        <option value="OLD">OLD Classic</option>
+                        <option value="RARE">RARE Special</option>
+                    </select>
+                </div>
+
+                <div class="pt-3 flex gap-3">
+                    <button type="button" onclick="closeModal('addEmoteModal')" class="flex-1 py-3 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold text-xs uppercase">
+                        Cancel
+                    </button>
+                    <button type="submit" id="emoteSubmitBtn" class="flex-1 py-3 rounded-xl bg-gradient-to-r from-amber-600 to-red-600 hover:from-amber-500 hover:to-red-500 text-white font-bold text-xs uppercase flex items-center justify-center gap-2">
+                        <span id="emoteBtnText">Add to Catalog</span>
+                        <i class="fas fa-spinner fa-spin hidden" id="emoteSpinner"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 5: SEND NOTICE BROADCAST -->
+    <div id="sendNoticeModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop hidden">
+        <div class="glass-panel w-full max-w-lg p-6 sm:p-8 rounded-2xl border border-blue-500/30 shadow-2xl relative">
+            <div class="flex items-center justify-between pb-4 border-b border-gray-800">
+                <h3 class="text-lg font-bold text-white gaming-title flex items-center gap-2">
+                    <i class="fas fa-bullhorn text-blue-500"></i>
+                    <span>Broadcast Notice Message</span>
+                </h3>
+                <button onclick="closeModal('sendNoticeModal')" class="text-gray-400 hover:text-white p-1">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <form id="sendNoticeForm" class="space-y-4 mt-5">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
+                        Broadcast Target Audience
+                    </label>
+                    <select id="noticeTargetSelect" class="glass-input w-full px-4 py-2.5 rounded-xl text-xs">
+                        <option value="ALL">ALL Connected Users</option>
+                        <option value="SPECIFIC">Specific Username</option>
+                    </select>
+                </div>
+
+                <div id="specificUserContainer" class="hidden">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
+                        Specific Username
+                    </label>
+                    <input type="text" id="noticeSpecificUsername" placeholder="e.g. GamerPro99" class="glass-input w-full px-4 py-2.5 rounded-xl text-xs">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
+                        Notice Message Content
+                    </label>
+                    <textarea id="noticeMessageText" required rows="4" placeholder="Enter broadcast text for clients..." class="glass-input w-full px-4 py-2.5 rounded-xl text-xs resize-none"></textarea>
+                </div>
+
+                <div class="pt-3 flex gap-3">
+                    <button type="button" onclick="closeModal('sendNoticeModal')" class="flex-1 py-3 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold text-xs uppercase">
+                        Cancel
+                    </button>
+                    <button type="submit" id="noticeSubmitBtn" class="flex-1 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs uppercase flex items-center justify-center gap-2">
+                        <span id="noticeBtnText">Push Broadcast</span>
+                        <i class="fas fa-spinner fa-spin hidden" id="noticeSpinner"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ======================================================= -->
+    <!-- JAVASCRIPT LOGIC & FIREBASE SDK MODULAR INTEGRATION     -->
+    <!-- ======================================================= -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, getDocs, doc, getDoc, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // Client-side Firebase Read Config
+        const firebaseConfig = {
+            apiKey: "AIzaSyDPzPn7SXDQcF2UpSAB2fGpRJCe1VDQd7k",
+            authDomain: "emote-4756e.firebaseapp.com",
+            projectId: "emote-4756e",
+            storageBucket: "emote-4756e.firebasestorage.app",
+            messagingSenderId: "273756315097",
+            appId: "1:273756315097:web:8560f49134cfa775564dc8"
+        };
+
+        // Initialize Firebase Client (for direct high-speed read operations)
+        let db = null;
+        try {
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+        } catch (e) {
+            console.warn("Firebase client read init fallback:", e);
+        }
+
+        // Global Cache & State
+        window.adminState = {
+            authenticated: false,
+            currentTab: 'dashboard',
+            keys: [],
+            bots: [],
+            emotes: [],
+            notices: [],
+            settings: {}
+        };
+
+        // ==========================================
+        // TOAST SYSTEM
+        // ==========================================
+        window.showToast = function(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+
+            const toast = document.createElement('div');
+            toast.className = 'glass-panel p-4 rounded-xl border flex items-center gap-3 shadow-2xl pointer-events-auto transform translate-y-[-20px] opacity-0 transition-all duration-300';
+            
+            let iconClass = 'fa-info-circle text-blue-400';
+            let borderColor = 'border-blue-500/40';
+
+            if (type === 'success') {
+                iconClass = 'fa-check-circle text-emerald-400';
+                borderColor = 'border-emerald-500/40';
+            } else if (type === 'error') {
+                iconClass = 'fa-exclamation-triangle text-red-400';
+                borderColor = 'border-red-500/40';
+            } else if (type === 'warning') {
+                iconClass = 'fa-exclamation-circle text-amber-400';
+                borderColor = 'border-amber-500/40';
+            }
+
+            toast.classList.add(borderColor);
+            toast.innerHTML = `
+                <i class="fas ${iconClass} text-lg shrink-0"></i>
+                <div class="text-xs font-semibold text-gray-200 flex-1">${escapeHtml(message)}</div>
+                <button class="text-gray-400 hover:text-white ml-2 text-xs" onclick="this.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+
+            container.appendChild(toast);
+
+            // Animate in
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-[-20px]', 'opacity-0');
+            });
+
+            // Auto dismiss after 3.5 seconds
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-[-20px]');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        };
+
+        // ==========================================
+        // UTILITY FUNCTIONS
+        // ==========================================
+        window.escapeHtml = function(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        };
+
+        window.formatDate = function(timestamp) {
+            if (!timestamp) return 'Never';
+            try {
+                // If it's a Firestore Timestamp or epoch seconds/millis
+                let d;
+                if (timestamp.seconds) {
+                    d = new Date(timestamp.seconds * 1000);
+                } else {
+                    d = new Date(timestamp);
+                }
+                return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            } catch (e) {
+                return 'Invalid Date';
+            }
+        };
+
+        window.handleLogoFallback = function(imgElement) {
+            imgElement.onerror = null;
+            imgElement.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" rx="20" fill="%23111827"/><text x="50%" y="55%" font-family="sans-serif" font-weight="900" font-size="28" fill="%23ef4444" text-anchor="middle" dominant-baseline="middle">MPX</text></svg>';
+        };
+
+        window.openModal = function(id) {
+            const el = document.getElementById(id);
+            if (el) el.classList.remove('hidden');
+        };
+
+        window.closeModal = function(id) {
+            const el = document.getElementById(id);
+            if (el) el.classList.add('hidden');
+        };
+
+        // ==========================================
+        // SECURE API CLIENT REQUEST WRAPPER
+        // ==========================================
+        async function apiRequest(endpoint, method = 'GET', body = null) {
+            const options = {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include' // Transmit HTTP-only secure session cookies
+            };
+
+            if (body && (method === 'POST' || method === 'PUT')) {
+                options.body = JSON.stringify(body);
+            }
+
+            try {
+                const response = await fetch(endpoint, options);
+                
+                // Handle 401 Unauthorized globally
+                if (response.status === 401 && endpoint !== '/api/master-login' && endpoint !== '/api/admin/session') {
+                    showToast('Admin session expired. Please re-login.', 'error');
+                    setAuthState(false);
+                    return { success: false, message: 'Unauthorized' };
+                }
+
+                const data = await response.json().catch(() => ({}));
+                return { ...data, status: response.status };
+            } catch (err) {
+                console.error("API Request Error:", err);
+                return {
+                    success: false,
+                    message: "Network or server connection failed. Please retry."
+                };
+            }
+        }
+
+        // ==========================================
+        // AUTHENTICATION FLOWS
+        // ==========================================
+        function setAuthState(isAuthed) {
+            window.adminState.authenticated = isAuthed;
+            const loginScreen = document.getElementById('loginScreen');
+            const adminApp = document.getElementById('adminApp');
+
+            if (isAuthed) {
+                loginScreen.classList.add('hidden');
+                adminApp.classList.remove('hidden');
+                loadAllData();
+            } else {
+                loginScreen.classList.remove('hidden');
+                adminApp.classList.add('hidden');
+            }
+        }
+
+        async function checkSession() {
+            try {
+                const res = await apiRequest('/api/admin/session');
+                if (res && res.authenticated === true) {
+                    setAuthState(true);
+                } else {
+                    setAuthState(false);
+                }
+            } catch (e) {
+                setAuthState(false);
+            }
+        }
+
+        // ==========================================
+        // EVENT LISTENERS & DOM HOOKS
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', () => {
+            initParticles();
+            checkSession();
+
+            // Toggle Password Visibility
+            const togglePasswordBtn = document.getElementById('togglePasswordBtn');
+            const adminKeyInput = document.getElementById('adminKeyInput');
+            const passwordEyeIcon = document.getElementById('passwordEyeIcon');
+
+            togglePasswordBtn?.addEventListener('click', () => {
+                const isPassword = adminKeyInput.type === 'password';
+                adminKeyInput.type = isPassword ? 'text' : 'password';
+                passwordEyeIcon.className = isPassword ? 'fas fa-eye-slash text-sm' : 'fas fa-eye text-sm';
+            });
+
+            // Admin Login Form Submit
+            const loginForm = document.getElementById('adminLoginForm');
+            loginForm?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const key = adminKeyInput.value.trim();
+                if (!key) {
+                    showToast('Master password is required.', 'warning');
+                    return;
+                }
+
+                const btn = document.getElementById('loginSubmitBtn');
+                const btnText = document.getElementById('loginBtnText');
+                const btnIcon = document.getElementById('loginBtnIcon');
+                const spinner = document.getElementById('loginSpinner');
+
+                btn.disabled = true;
+                btnText.textContent = 'Verifying Security Token...';
+                btnIcon.classList.add('hidden');
+                spinner.classList.remove('hidden');
+
+                const res = await apiRequest('/api/master-login', 'POST', { key: key });
+
+                btn.disabled = false;
+                btnText.textContent = 'Authorize Admin Access';
+                btnIcon.classList.remove('hidden');
+                spinner.classList.add('hidden');
+
+                if (res && res.success) {
+                    showToast('Authorization granted. Welcome Master Admin!', 'success');
+                    adminKeyInput.value = '';
+                    setAuthState(true);
+                } else {
+                    showToast(res.message || 'Invalid master password.', 'error');
+                }
+            });
+
+            // Logout
+            document.getElementById('adminLogoutBtn')?.addEventListener('click', async () => {
+                await apiRequest('/api/admin/logout', 'POST');
+                showToast('Admin session terminated.', 'info');
+                setAuthState(false);
+            });
+
+            // Mobile Navigation Toggle
+            const openSidebarBtn = document.getElementById('openSidebarBtn');
+            const closeSidebarBtn = document.getElementById('closeSidebarBtn');
+            const sidebar = document.getElementById('sidebar');
+            const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+
+            const toggleMobileSidebar = (open) => {
+                if (open) {
+                    sidebar.classList.remove('-translate-x-full');
+                    sidebarBackdrop.classList.remove('hidden');
+                } else {
+                    sidebar.classList.add('-translate-x-full');
+                    sidebarBackdrop.classList.add('hidden');
+                }
+            };
+
+            openSidebarBtn?.addEventListener('click', () => toggleMobileSidebar(true));
+            closeSidebarBtn?.addEventListener('click', () => toggleMobileSidebar(false));
+            sidebarBackdrop?.addEventListener('click', () => toggleMobileSidebar(false));
+
+            // Tab Switching
+            document.querySelectorAll('.nav-item').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const tab = btn.dataset.tab;
+                    switchTab(tab);
+                    toggleMobileSidebar(false);
+                });
+            });
+
+            // Refresh Data Button
+            document.getElementById('refreshDataBtn')?.addEventListener('click', () => {
+                const icon = document.getElementById('refreshIcon');
+                icon.classList.add('fa-spin');
+                loadAllData().finally(() => {
+                    setTimeout(() => icon.classList.remove('fa-spin'), 600);
+                });
+            });
+
+            // Notice Target Selector Handler
+            const noticeTargetSelect = document.getElementById('noticeTargetSelect');
+            const specificUserContainer = document.getElementById('specificUserContainer');
+            noticeTargetSelect?.addEventListener('change', () => {
+                if (noticeTargetSelect.value === 'SPECIFIC') {
+                    specificUserContainer.classList.remove('hidden');
+                } else {
+                    specificUserContainer.classList.add('hidden');
+                }
+            });
+
+            // Search and Filter Listeners
+            document.getElementById('keySearchInput')?.addEventListener('input', renderKeysTable);
+            document.getElementById('keyStatusFilter')?.addEventListener('change', renderKeysTable);
+            document.getElementById('emoteSearchInput')?.addEventListener('input', renderEmotesGrid);
+            document.getElementById('emoteCategoryFilter')?.addEventListener('change', renderEmotesGrid);
+
+            // Form Submissions
+            setupFormHandlers();
+        });
+
+        window.switchTab = function(tabName) {
+            window.adminState.currentTab = tabName;
+
+            // Update Nav UI
+            document.querySelectorAll('.nav-item').forEach(btn => {
+                if (btn.dataset.tab === tabName) {
+                    btn.className = 'nav-item w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 text-white bg-red-600/20 border border-red-500/40 shadow-neon-red';
+                    btn.querySelector('i').className = `fas ${getTabIcon(tabName)} text-red-400 w-5 text-center`;
+                } else {
+                    btn.className = 'nav-item w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 text-gray-400 hover:text-white hover:bg-white/5 border border-transparent';
+                    btn.querySelector('i').className = `fas ${getTabIcon(btn.dataset.tab)} text-gray-400 w-5 text-center`;
+                }
+            });
+
+            // Update Views
+            document.querySelectorAll('.tab-view').forEach(view => {
+                view.classList.add('hidden');
+            });
+            const activeView = document.getElementById(`tab-${tabName}`);
+            if (activeView) activeView.classList.remove('hidden');
+
+            // Update Top Header Title
+            const titleMap = {
+                dashboard: 'Dashboard Overview',
+                keys: 'License Key Management',
+                bots: 'Bots Infrastructure Hub',
+                emotes: 'Emotes Library & Catalog',
+                notices: 'Broadcast Notifications',
+                settings: 'System Configuration'
+            };
+            document.getElementById('pageTitle').textContent = titleMap[tabName] || 'Admin Center';
+        };
+
+        function getTabIcon(tab) {
+            const map = {
+                dashboard: 'fa-chart-line',
+                keys: 'fa-key',
+                bots: 'fa-robot',
+                emotes: 'fa-icons',
+                notices: 'fa-bullhorn',
+                settings: 'fa-sliders-h'
+            };
+            return map[tab] || 'fa-circle';
+        }
+
+        // ==========================================
+        // DATA LOADERS & SYNC ENGINE
+        // ==========================================
+        async function loadAllData() {
+            showToast('Synchronizing database...', 'info');
+            await Promise.all([
+                loadKeys(),
+                loadBots(),
+                loadEmotes(),
+                loadNotices(),
+                loadSettings()
+            ]);
+            updateDashboardStats();
+            showToast('All system data synchronized.', 'success');
+        }
+
+        async function loadKeys() {
+            try {
+                let keysList = [];
+                if (db) {
+                    const snap = await getDocs(collection(db, "keys"));
+                    snap.forEach(doc => {
+                        keysList.push({ id: doc.id, ...doc.data() });
+                    });
+                }
+                window.adminState.keys = keysList;
+                renderKeysTable();
+                renderRecentKeys();
+            } catch (e) {
+                console.error("Error loading keys:", e);
+            }
+        }
+
+        async function loadBots() {
+            try {
+                let botsList = [];
+                if (db) {
+                    const snap = await getDocs(collection(db, "bots"));
+                    snap.forEach(doc => {
+                        botsList.push({ id: doc.id, ...doc.data() });
+                    });
+                }
+                window.adminState.bots = botsList;
+                renderBotsGrid();
+            } catch (e) {
+                console.error("Error loading bots:", e);
+            }
+        }
+
+        async function loadEmotes() {
+            try {
+                let emotesList = [];
+                if (db) {
+                    const snap = await getDocs(collection(db, "emotes"));
+                    snap.forEach(doc => {
+                        emotesList.push({ id: doc.id, ...doc.data() });
+                    });
+                }
+
+                // If Firestore emotes is empty, populate fallback preset emotes
+                if (emotesList.length === 0) {
+                    emotesList = [
+                        { emote_id: "909000063", name: "EVO AK", category: "EVO" },
+                        { emote_id: "909051014", name: "Puffy Ride", category: "RARE" },
+                        { emote_id: "909033001", name: "EVO M4A1", category: "EVO" },
+                        { emote_id: "909000014", name: "Throne", category: "OLD" },
+                        { emote_id: "909041003", name: "Inosuke", category: "RARE" },
+                        { emote_id: "909050009", name: "Circle", category: "RARE" },
+                        { emote_id: "909049012", name: "Flying Guns", category: "RARE" },
+                        { emote_id: "909051013", name: "Petals", category: "RARE" },
+                        { emote_id: "909051012", name: "Bow", category: "RARE" },
+                        { emote_id: "909051010", name: "Motorbikes", category: "RARE" },
+                        { emote_id: "909051004", name: "Shower", category: "RARE" },
+                        { emote_id: "909051002", name: "Dream", category: "RARE" },
+                        { emote_id: "909051001", name: "Angelic", category: "RARE" },
+                        { emote_id: "909048015", name: "Paint", category: "RARE" },
+                        { emote_id: "909044015", name: "Sword", category: "RARE" },
+                        { emote_id: "909041008", name: "Flar", category: "RARE" },
+                        { emote_id: "909049003", name: "Owl", category: "RARE" },
+                        { emote_id: "909050008", name: "Thor", category: "RARE" },
+                        { emote_id: "909049001", name: "Bigdill", category: "RARE" },
+                        { emote_id: "909041013", name: "CS GM", category: "RARE" }
+                    ];
+                }
+                window.adminState.emotes = emotesList;
+                renderEmotesGrid();
+            } catch (e) {
+                console.error("Error loading emotes:", e);
+            }
+        }
+
+        async function loadNotices() {
+            try {
+                let noticesList = [];
+                if (db) {
+                    const snap = await getDocs(collection(db, "notices"));
+                    snap.forEach(doc => {
+                        noticesList.push({ id: doc.id, ...doc.data() });
+                    });
+                }
+                window.adminState.notices = noticesList;
+                renderNoticesList();
+            } catch (e) {
+                console.error("Error loading notices:", e);
+            }
+        }
+
+        async function loadSettings() {
+            try {
+                if (db) {
+                    const docSnap = await getDoc(doc(db, "settings", "config"));
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        window.adminState.settings = data;
+                        document.getElementById('settingAppName').value = data.app_name || 'MPX PANEL';
+                        document.getElementById('settingEmbedUrl').value = data.embed_url || '';
+                        document.getElementById('settingMaintenanceMode').checked = !!data.maintenance_mode;
+                    }
+                }
+            } catch (e) {
+                console.error("Error loading settings:", e);
+            }
+        }
+
+        function updateDashboardStats() {
+            const keys = window.adminState.keys;
+            const bots = window.adminState.bots;
+            const emotes = window.adminState.emotes;
+            const notices = window.adminState.notices;
+
+            document.getElementById('statTotalKeys').textContent = keys.length;
+            const activeKeys = keys.filter(k => k.active !== false).length;
+            document.getElementById('statActiveKeysSub').textContent = `${activeKeys} Active`;
+
+            const activeBots = bots.filter(b => b.active !== false).length;
+            document.getElementById('statActiveBots').textContent = activeBots;
+
+            document.getElementById('statTotalEmotes').textContent = emotes.length;
+            document.getElementById('statActiveNotices').textContent = notices.length;
+        }
+
+        // ==========================================
+        // RENDERERS
+        // ==========================================
+        function renderKeysTable() {
+            const tbody = document.getElementById('keysTableBody');
+            if (!tbody) return;
+
+            const search = (document.getElementById('keySearchInput')?.value || '').toLowerCase();
+            const statusFilter = document.getElementById('keyStatusFilter')?.value || 'ALL';
+
+            const filtered = window.adminState.keys.filter(k => {
+                const matchSearch = (k.key || k.id || '').toLowerCase().includes(search) || 
+                                    (k.username || '').toLowerCase().includes(search);
+                const isActive = k.active !== false;
+                const matchStatus = statusFilter === 'ALL' ? true :
+                                    statusFilter === 'ACTIVE' ? isActive : !isActive;
+                return matchSearch && matchStatus;
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-gray-500">No keys found matching query.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(k => {
+                const keyStr = k.key || k.id;
+                const username = k.username || '<span class="text-gray-500 italic">Unassigned</span>';
+                const validity = k.validity_days || 7;
+                const used = (k.used_devices || []).length;
+                const limit = k.device_limit || 2;
+                const isActive = k.active !== false;
+
+                return `
+                    <tr class="hover:bg-white/[0.02] transition-colors">
+                        <td class="p-4 font-mono font-bold text-white">${escapeHtml(keyStr)}</td>
+                        <td class="p-4 font-medium text-gray-300">${username}</td>
+                        <td class="p-4 font-semibold text-gray-300">${validity} Days</td>
+                        <td class="p-4">
+                            <span class="px-2.5 py-1 rounded-lg text-xs font-bold ${used >= limit ? 'bg-red-950/60 text-red-400 border border-red-500/30' : 'bg-gray-800 text-gray-300'}">
+                                ${used} / ${limit}
+                            </span>
+                        </td>
+                        <td class="p-4">
+                            ${isActive ? 
+                                '<span class="px-2.5 py-1 rounded-full bg-emerald-950/60 border border-emerald-500/40 text-emerald-400 text-[10px] font-extrabold uppercase tracking-wider">ACTIVE</span>' : 
+                                '<span class="px-2.5 py-1 rounded-full bg-red-950/60 border border-red-500/40 text-red-400 text-[10px] font-extrabold uppercase tracking-wider">REVOKED</span>'
+                            }
+                        </td>
+                        <td class="p-4 text-right space-x-2">
+                            <button onclick="openExtendModal('${escapeHtml(keyStr)}')" class="px-3 py-1.5 rounded-lg bg-orange-600/20 hover:bg-orange-600 text-orange-400 hover:text-white border border-orange-500/30 transition-all text-xs font-bold">
+                                <i class="fas fa-calendar-plus mr-1"></i> Extend
+                            </button>
+                            ${isActive ? `
+                                <button onclick="revokeKeyAction('${escapeHtml(keyStr)}')" class="px-3 py-1.5 rounded-lg bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 transition-all text-xs font-bold">
+                                    <i class="fas fa-ban mr-1"></i> Revoke
+                                </button>
+                            ` : ''}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderRecentKeys() {
+            const tbody = document.getElementById('recentKeysTableBody');
+            if (!tbody) return;
+
+            const recent = window.adminState.keys.slice(0, 5);
+            if (recent.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-gray-500">No active keys yet.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = recent.map(k => {
+                const keyStr = k.key || k.id;
+                const username = k.username || 'Unassigned';
+                const validity = k.validity_days || 7;
+                const used = (k.used_devices || []).length;
+                const limit = k.device_limit || 2;
+                const isActive = k.active !== false;
+
+                return `
+                    <tr class="hover:bg-white/[0.02]">
+                        <td class="p-3 font-mono font-bold text-white">${escapeHtml(keyStr)}</td>
+                        <td class="p-3 text-gray-300">${escapeHtml(username)}</td>
+                        <td class="p-3 text-gray-300">${validity}d</td>
+                        <td class="p-3">${used}/${limit}</td>
+                        <td class="p-3">
+                            <span class="px-2 py-0.5 rounded text-[9px] font-bold ${isActive ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/30' : 'bg-red-950 text-red-400'}">
+                                ${isActive ? 'ACTIVE' : 'REVOKED'}
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderBotsGrid() {
+            const container = document.getElementById('botsGridContainer');
+            if (!container) return;
+
+            const bots = window.adminState.bots;
+            if (bots.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full p-8 text-center glass-card rounded-2xl">
+                        <i class="fas fa-robot text-4xl text-gray-600 mb-3"></i>
+                        <p class="text-sm font-semibold text-gray-300">No Bot instances registered yet.</p>
+                        <p class="text-xs text-gray-500 mt-1">Click "Add New Bot" to configure API dispatch endpoints.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = bots.map(b => {
+                const botId = b.id || b.name;
+                const isActive = b.active !== false;
+                const region = b.region || 'ALL';
+
+                return `
+                    <div class="glass-card p-6 rounded-2xl flex flex-col justify-between border-t-2 ${isActive ? 'border-t-emerald-500' : 'border-t-red-500'}">
+                        <div>
+                            <div class="flex items-center justify-between mb-3">
+                                <h4 class="gaming-title text-lg font-bold text-white">${escapeHtml(b.name || 'BOT')}</h4>
+                                <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${isActive ? 'bg-emerald-950/60 border border-emerald-500/40 text-emerald-400' : 'bg-red-950/60 border border-red-500/40 text-red-400'}">
+                                    ${isActive ? 'ONLINE' : 'OFFLINE'}
+                                </span>
+                            </div>
+                            
+                            <p class="text-xs text-gray-400 mb-4">${escapeHtml(b.description || 'No description provided.')}</p>
+                            
+                            <div class="space-y-2 text-xs">
+                                <div class="flex justify-between py-1 border-b border-gray-800">
+                                    <span class="text-gray-400">Region:</span>
+                                    <span class="font-bold text-orange-400">${escapeHtml(region)}</span>
+                                </div>
+                                <div class="py-1 border-b border-gray-800">
+                                    <span class="text-gray-400 block mb-1">API Endpoint:</span>
+                                    <span class="font-mono text-[11px] text-gray-300 break-all bg-dark-950 p-2 rounded block border border-gray-800">
+                                        ${escapeHtml(b.api_url || 'N/A')}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 pt-4 border-t border-gray-800 flex justify-end gap-2">
+                            <button onclick="deleteBotAction('${escapeHtml(botId)}')" class="px-3 py-1.5 rounded-lg bg-red-950/40 hover:bg-red-600 text-red-400 hover:text-white border border-red-800/50 transition-all text-xs font-bold">
+                                <i class="fas fa-trash-alt mr-1"></i> Delete
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderEmotesGrid() {
+            const container = document.getElementById('emotesGridContainer');
+            if (!container) return;
+
+            const search = (document.getElementById('emoteSearchInput')?.value || '').toLowerCase();
+            const categoryFilter = document.getElementById('emoteCategoryFilter')?.value || 'ALL';
+
+            const filtered = window.adminState.emotes.filter(e => {
+                const matchSearch = (e.name || '').toLowerCase().includes(search) || 
+                                    (e.emote_id || '').toLowerCase().includes(search);
+                const matchCat = categoryFilter === 'ALL' || (e.category || 'ALL') === categoryFilter;
+                return matchSearch && matchCat;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="col-span-full p-8 text-center text-gray-500 glass-card rounded-2xl">No emotes found matching search filters.</div>`;
+                return;
+            }
+
+            container.innerHTML = filtered.map(e => {
+                const emoteId = e.emote_id || e.id;
+                const name = e.name || 'Emote';
+                const cat = e.category || 'ALL';
+                const imgUrl = `https://cdn.jsdelivr.net/gh/ShahGCreator/icon@main/PNG/${emoteId}.png`;
+
+                return `
+                    <div class="glass-card p-3.5 rounded-2xl flex flex-col items-center justify-between text-center group relative overflow-hidden">
+                        <div class="w-16 h-16 sm:w-20 sm:h-20 mb-2 relative flex items-center justify-center">
+                            <img src="${imgUrl}" 
+                                 alt="${escapeHtml(name)}" 
+                                 class="w-full h-full object-contain filter drop-shadow group-hover:scale-110 transition-transform duration-300"
+                                 onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎭</text></svg>'">
+                        </div>
+
+                        <div class="w-full">
+                            <span class="px-2 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wider bg-amber-950/60 text-amber-400 border border-amber-500/30">
+                                ${escapeHtml(cat)}
+                            </span>
+                            <h5 class="font-bold text-xs text-white truncate mt-1.5">${escapeHtml(name)}</h5>
+                            <p class="font-mono text-[10px] text-gray-400">${escapeHtml(emoteId)}</p>
+                        </div>
+
+                        <button onclick="deleteEmoteAction('${escapeHtml(emoteId)}')" class="mt-3 w-full py-1.5 rounded-lg bg-red-950/40 hover:bg-red-600 text-red-400 hover:text-white border border-red-800/40 text-[11px] font-bold transition-all">
+                            <i class="fas fa-trash-alt"></i> Remove
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderNoticesList() {
+            const container = document.getElementById('noticesListContainer');
+            if (!container) return;
+
+            const notices = window.adminState.notices;
+            if (notices.length === 0) {
+                container.innerHTML = `
+                    <div class="p-8 text-center text-gray-500 glass-card rounded-2xl">
+                        <i class="fas fa-bullhorn text-3xl text-gray-600 mb-2"></i>
+                        <p class="text-sm font-semibold text-gray-300">No broadcast messages yet.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = notices.map(n => {
+                const target = n.target_username || 'ALL';
+                const isAll = target === 'ALL';
+
+                return `
+                    <div class="glass-card p-5 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div class="flex items-start gap-3.5">
+                            <div class="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0">
+                                <i class="fas fa-bullhorn"></i>
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="px-2.5 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider ${isAll ? 'bg-blue-950 border border-blue-500/40 text-blue-400' : 'bg-purple-950 border border-purple-500/40 text-purple-400'}">
+                                        Target: ${escapeHtml(target)}
+                                    </span>
+                                    <span class="text-[10px] text-gray-400">${formatDate(n.created_at)}</span>
+                                </div>
+                                <p class="text-xs text-gray-200 font-medium whitespace-pre-line">${escapeHtml(n.message)}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ==========================================
+        // ACTION HANDLERS & MODAL BINDINGS
+        // ==========================================
+        window.openExtendModal = function(keyStr) {
+            document.getElementById('extendTargetKey').value = keyStr;
+            document.getElementById('extendDays').value = '7';
+            openModal('extendKeyModal');
+        };
+
+        window.revokeKeyAction = async function(keyStr) {
+            if (!confirm(`Are you sure you want to revoke access key: ${keyStr}?`)) return;
+
+            showToast(`Revoking key ${keyStr}...`, 'info');
+            const res = await apiRequest('/api/admin/revoke-key', 'POST', { key: keyStr });
+            if (res && res.success) {
+                showToast('Key revoked successfully.', 'success');
+                await loadKeys();
+            } else {
+                showToast(res.message || 'Failed to revoke key.', 'error');
+            }
+        };
+
+        window.deleteBotAction = async function(botId) {
+            if (!confirm(`Are you sure you want to delete bot instance: ${botId}?`)) return;
+
+            showToast(`Deleting bot ${botId}...`, 'info');
+            const res = await apiRequest('/api/admin/delete-bot', 'POST', { bot_id: botId });
+            if (res && res.success) {
+                showToast('Bot deleted successfully.', 'success');
+                await loadBots();
+            } else {
+                showToast(res.message || 'Failed to delete bot.', 'error');
+            }
+        };
+
+        window.deleteEmoteAction = async function(emoteId) {
+            if (!confirm(`Are you sure you want to delete emote: ${emoteId}?`)) return;
+
+            showToast(`Removing emote ${emoteId}...`, 'info');
+            const res = await apiRequest('/api/admin/delete-emote', 'POST', { emote_id: emoteId });
+            if (res && res.success) {
+                showToast('Emote removed successfully.', 'success');
+                await loadEmotes();
+            } else {
+                showToast(res.message || 'Failed to remove emote.', 'error');
+            }
+        };
+
+        // ==========================================
+        // FORM SUBMISSION HANDLERS
+        // ==========================================
+        function setupFormHandlers() {
+            // Generate Key Form
+            const genKeyForm = document.getElementById('generateKeyForm');
+            genKeyForm?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const username = document.getElementById('genUsername').value.trim();
+                const custom_key = document.getElementById('genCustomKey').value.trim();
+                const validity_days = parseInt(document.getElementById('genValidity').value) || 7;
+                const device_limit = parseInt(document.getElementById('genDeviceLimit').value) || 2;
+
+                const btn = document.getElementById('genSubmitBtn');
+                const btnText = document.getElementById('genBtnText');
+                const spinner = document.getElementById('genSpinner');
+
+                btn.disabled = true;
+                btnText.textContent = 'Generating...';
+                spinner.classList.remove('hidden');
+
+                const res = await apiRequest('/api/admin/generate-key', 'POST', {
+                    username, custom_key, validity_days, device_limit
+                });
+
+                btn.disabled = false;
+                btnText.textContent = 'Create Key';
+                spinner.classList.add('hidden');
+
+                if (res && res.success) {
+                    showToast('Key generated successfully!', 'success');
+                    document.getElementById('generatedKeyText').textContent = res.key;
+                    document.getElementById('keyResultBox').classList.remove('hidden');
+                    loadKeys();
+                } else {
+                    showToast(res.message || 'Failed to generate key.', 'error');
+                }
+            });
+
+            // Copy Key Button in Modal
+            document.getElementById('copyGenKeyBtn')?.addEventListener('click', () => {
+                const keyText = document.getElementById('generatedKeyText').textContent;
+                if (keyText) {
+                    navigator.clipboard.writeText(keyText).then(() => {
+                        showToast('Key copied to clipboard!', 'success');
+                    }).catch(() => {
+                        showToast('Failed to copy key automatically.', 'warning');
+                    });
+                }
+            });
+
+            // Extend Key Form
+            const extendKeyForm = document.getElementById('extendKeyForm');
+            extendKeyForm?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const key = document.getElementById('extendTargetKey').value.trim();
+                const extra_days = parseInt(document.getElementById('extendDays').value) || 7;
+
+                showToast(`Extending key validity by ${extra_days} days...`, 'info');
+                const res = await apiRequest('/api/admin/extend-key', 'POST', { key, extra_days });
+
+                if (res && res.success) {
+                    showToast('Validity extended successfully!', 'success');
+                    closeModal('extendKeyModal');
+                    loadKeys();
+                } else {
+                    showToast(res.message || 'Failed to extend key.', 'error');
+                }
+            });
+
+            // Add Bot Form
+            const addBotForm = document.getElementById('addBotForm');
+            addBotForm?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const name = document.getElementById('botNameInput').value.trim();
+                const api_url = document.getElementById('botUrlInput').value.trim();
+                const region = document.getElementById('botRegionSelect').value;
+                const active = document.getElementById('botActiveSelect').value === 'true';
+                const description = document.getElementById('botDescInput').value.trim();
+
+                const btn = document.getElementById('botSubmitBtn');
+                const btnText = document.getElementById('botBtnText');
+                const spinner = document.getElementById('botSpinner');
+
+                btn.disabled = true;
+                btnText.textContent = 'Saving Bot...';
+                spinner.classList.remove('hidden');
+
+                const res = await apiRequest('/api/admin/add-bot', 'POST', {
+                    name, api_url, region, active, description
+                });
+
+                btn.disabled = false;
+                btnText.textContent = 'Save Bot';
+                spinner.classList.add('hidden');
+
+                if (res && res.success) {
+                    showToast('Bot instance saved successfully!', 'success');
+                    closeModal('addBotModal');
+                    addBotForm.reset();
+                    loadBots();
+                } else {
+                    showToast(res.message || 'Failed to save bot.', 'error');
+                }
+            });
+
+            // Add Emote Form
+            const addEmoteForm = document.getElementById('addEmoteForm');
+            addEmoteForm?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const emote_id = document.getElementById('emoteIdInput').value.trim();
+                const name = document.getElementById('emoteNameInput').value.trim();
+                const category = document.getElementById('emoteCategorySelect').value;
+
+                const btn = document.getElementById('emoteSubmitBtn');
+                const btnText = document.getElementById('emoteBtnText');
+                const spinner = document.getElementById('emoteSpinner');
+
+                btn.disabled = true;
+                btnText.textContent = 'Adding Emote...';
+                spinner.classList.remove('hidden');
+
+                const res = await apiRequest('/api/admin/add-emote', 'POST', {
+                    emote_id, name, category
+                });
+
+                btn.disabled = false;
+                btnText.textContent = 'Add to Catalog';
+                spinner.classList.add('hidden');
+
+                if (res && res.success) {
+                    showToast('Emote registered successfully!', 'success');
+                    closeModal('addEmoteModal');
+                    addEmoteForm.reset();
+                    loadEmotes();
+                } else {
+                    showToast(res.message || 'Failed to add emote.', 'error');
+                }
+            });
+
+            // Send Broadcast Notice Form
+            const sendNoticeForm = document.getElementById('sendNoticeForm');
+            sendNoticeForm?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const targetType = document.getElementById('noticeTargetSelect').value;
+                const target_username = targetType === 'SPECIFIC' ? 
+                                        document.getElementById('noticeSpecificUsername').value.trim() : 'ALL';
+                const message = document.getElementById('noticeMessageText').value.trim();
+
+                if (!message) {
+                    showToast('Broadcast message content cannot be empty.', 'warning');
+                    return;
+                }
+
+                const btn = document.getElementById('noticeSubmitBtn');
+                const btnText = document.getElementById('noticeBtnText');
+                const spinner = document.getElementById('noticeSpinner');
+
+                btn.disabled = true;
+                btnText.textContent = 'Broadcasting...';
+                spinner.classList.remove('hidden');
+
+                const res = await apiRequest('/api/admin/send-notice', 'POST', {
+                    target_username, message
+                });
+
+                btn.disabled = false;
+                btnText.textContent = 'Push Broadcast';
+                spinner.classList.add('hidden');
+
+                if (res && res.success) {
+                    showToast('Notice broadcasted to clients!', 'success');
+                    closeModal('sendNoticeModal');
+                    sendNoticeForm.reset();
+                    loadNotices();
+                } else {
+                    showToast(res.message || 'Failed to broadcast notice.', 'error');
+                }
+            });
+
+            // System Settings Form
+            const settingsForm = document.getElementById('systemSettingsForm');
+            settingsForm?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const app_name = document.getElementById('settingAppName').value.trim();
+                const embed_url = document.getElementById('settingEmbedUrl').value.trim();
+                const maintenance_mode = document.getElementById('settingMaintenanceMode').checked;
+
+                const btn = document.getElementById('saveSettingsBtn');
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Saving...';
+
+                const res = await apiRequest('/api/admin/update-settings', 'POST', {
+                    app_name, embed_url, maintenance_mode
+                });
+
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-save mr-2"></i> Save Configuration';
+
+                if (res && res.success) {
+                    showToast('System configuration saved!', 'success');
+                    loadSettings();
+                } else {
+                    showToast(res.message || 'Failed to update settings.', 'error');
+                }
+            });
+        }
+
+        // ==========================================
+        // PARTICLES GENERATOR
+        // ==========================================
+        function initParticles() {
+            const container = document.getElementById('particlesContainer');
+            if (!container) return;
+            const colors = ['#ef4444', '#f97316', '#dc2626', '#b91c1c'];
+
+            for (let i = 0; i < 20; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                const size = Math.random() * 4 + 2;
+                particle.style.width = `${size}px`;
+                particle.style.height = `${size}px`;
+                particle.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                particle.style.left = `${Math.random() * 100}%`;
+                particle.style.top = `${Math.random() * 100 + 100}%`;
+                particle.style.animationDuration = `${Math.random() * 12 + 10}s`;
+                particle.style.animationDelay = `${Math.random() * 5}s`;
+                container.appendChild(particle);
+            }
+        }
+    </script>
+
+    <!-- 
+    ========================================================================
+    FIRESTORE SECURITY RULES REFERENCE
+    ========================================================================
+    Firestore writes for administration are performed through the protected backend.
+
+    Recommended production rules:
+
+    rules_version = '2';
+    service cloud.firestore {
+      match /databases/{database}/documents {
+        
+        match /keys/{keyId} {
+          allow read: if true;
+          allow write: if false;
+        }
+
+        match /bots/{botId} {
+          allow read: if true;
+          allow write: if false;
+        }
+
+        match /emotes/{emoteId} {
+          allow read: if true;
+          allow write: if false;
+        }
+
+        match /notices/{noticeId} {
+          allow read: if true;
+          allow write: if false;
+        }
+
+        match /settings/{doc} {
+          allow read: if true;
+          allow write: if false;
+        }
+      }
+    }
+
+    Do not claim these rules provide complete authentication security.
+    The backend must protect all administrative mutations.
+    ========================================================================
+    -->
+</body>
+</html>
