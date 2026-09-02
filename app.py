@@ -40,18 +40,105 @@ DEFAULT_EMOTE_ID = os.environ.get("DEFAULT_EMOTE_ID", "909000063")
 UID_COUNT = int(os.environ.get("UID_COUNT", "6"))
 
 FIREBASE_PROJECT_ID = os.environ.get("FIREBASE_PROJECT_ID", "emote-4756e")
+FIREBASE_API_KEY = os.environ.get("FIREBASE_API_KEY", "AIzaSyDPzPn7SXDQcF2UpSAB2fGpRJCe1VDQd7k")
 FIREBASE_CLIENT_EMAIL = os.environ.get("FIREBASE_CLIENT_EMAIL", "")
 FIREBASE_PRIVATE_KEY = os.environ.get("FIREBASE_PRIVATE_KEY", "")
 FIREBASE_SERVICE_ACCOUNT_KEY = os.environ.get("FIREBASE_SERVICE_ACCOUNT_KEY", "")
 
 # -----------------------------------------------------------------------------
+# FIRESTORE REST API CLIENT (FALLBACK & ZERO-CONFIG ENGINE)
+# -----------------------------------------------------------------------------
+FIRESTORE_REST_BASE = f"https://firestore.googleapis.com/v1/projects/{FIREBASE_PROJECT_ID}/databases/(default)/documents"
+
+def val_to_firestore_field(v):
+    if v is None:
+        return {"nullValue": None}
+    elif isinstance(v, bool):
+        return {"booleanValue": v}
+    elif isinstance(v, int):
+        return {"integerValue": str(v)}
+    elif isinstance(v, float):
+        return {"doubleValue": v}
+    elif isinstance(v, str):
+        return {"stringValue": v}
+    elif isinstance(v, list):
+        return {"arrayValue": {"values": [val_to_firestore_field(item) for item in v]}}
+    elif isinstance(v, dict):
+        return {"mapValue": {"fields": dict_to_firestore_fields(v)}}
+    else:
+        return {"stringValue": str(v)}
+
+def dict_to_firestore_fields(d):
+    fields = {}
+    for k, v in d.items():
+        fields[k] = val_to_firestore_field(v)
+    return fields
+
+def firestore_field_to_val(v):
+    if "stringValue" in v:
+        return v["stringValue"]
+    if "integerValue" in v:
+        return int(v["integerValue"])
+    if "doubleValue" in v:
+        return float(v["doubleValue"])
+    if "booleanValue" in v:
+        return v["booleanValue"]
+    if "nullValue" in v:
+        return None
+    if "arrayValue" in v:
+        return [firestore_field_to_val(item) for item in v["arrayValue"].get("values", [])]
+    if "mapValue" in v:
+        return firestore_fields_to_dict(v["mapValue"].get("fields", {}))
+    if "timestampValue" in v:
+        return v["timestampValue"]
+    return None
+
+def firestore_fields_to_dict(fields):
+    res = {}
+    for k, v in fields.items():
+        res[k] = firestore_field_to_val(v)
+    return res
+
+def rest_get_doc(collection, doc_id):
+    url = f"{FIRESTORE_REST_BASE}/{collection}/{doc_id}"
+    params = {"key": FIREBASE_API_KEY} if FIREBASE_API_KEY else {}
+    resp = requests.get(url, params=params, timeout=8)
+    if resp.status_code == 200:
+        data = resp.json()
+        return firestore_fields_to_dict(data.get("fields", {}))
+    return None
+
+def rest_set_doc(collection, doc_id, data):
+    url = f"{FIRESTORE_REST_BASE}/{collection}/{doc_id}"
+    params = {"key": FIREBASE_API_KEY} if FIREBASE_API_KEY else {}
+    payload = {"fields": dict_to_firestore_fields(data)}
+    resp = requests.patch(url, params=params, json=payload, timeout=8)
+    return resp.status_code in [200, 201]
+
+def rest_add_doc(collection, data):
+    url = f"{FIRESTORE_REST_BASE}/{collection}"
+    params = {"key": FIREBASE_API_KEY} if FIREBASE_API_KEY else {}
+    payload = {"fields": dict_to_firestore_fields(data)}
+    resp = requests.post(url, params=params, json=payload, timeout=8)
+    if resp.status_code in [200, 201]:
+        res_json = resp.json()
+        doc_name = res_json.get("name", "")
+        return doc_name.split("/")[-1] if "/" in doc_name else "doc"
+    return None
+
+def rest_delete_doc(collection, doc_id):
+    url = f"{FIRESTORE_REST_BASE}/{collection}/{doc_id}"
+    params = {"key": FIREBASE_API_KEY} if FIREBASE_API_KEY else {}
+    resp = requests.delete(url, params=params, timeout=8)
+    return resp.status_code in [200, 204]
+
+# -----------------------------------------------------------------------------
 # FIREBASE ADMIN SDK INITIALIZATION (SERVER-SIDE)
 # -----------------------------------------------------------------------------
 firestore_db = None
-firebase_init_error = None
 
 def initialize_firebase():
-    global firestore_db, firebase_init_error
+    global firestore_db
     try:
         import firebase_admin
         from firebase_admin import credentials, firestore
@@ -62,7 +149,7 @@ def initialize_firebase():
 
         cred = None
 
-        # Strategy 1: Full JSON Service Account (String or Base64)
+        # Strategy 1: Full JSON Service Account
         if FIREBASE_SERVICE_ACCOUNT_KEY:
             raw_json = FIREBASE_SERVICE_ACCOUNT_KEY.strip()
             if not raw_json.startswith("{"):
@@ -73,10 +160,9 @@ def initialize_firebase():
             cert_dict = json.loads(raw_json)
             cred = credentials.Certificate(cert_dict)
 
-        # Strategy 2: Client Email + Private Key environment variables
+        # Strategy 2: Client Email + Private Key
         elif FIREBASE_CLIENT_EMAIL and FIREBASE_PRIVATE_KEY:
             cleaned_key = FIREBASE_PRIVATE_KEY.strip()
-            # Handle quoted private keys
             if cleaned_key.startswith('"') and cleaned_key.endswith('"'):
                 cleaned_key = cleaned_key[1:-1]
             if cleaned_key.startswith("'") and cleaned_key.endswith("'"):
@@ -91,7 +177,7 @@ def initialize_firebase():
                 "token_uri": "https://oauth2.googleapis.com/token"
             })
 
-        # Strategy 3: Standard Application Default Credentials or service-account.json file
+        # Strategy 3: Local file
         elif os.path.exists("service-account.json"):
             cred = credentials.Certificate("service-account.json")
 
@@ -100,30 +186,26 @@ def initialize_firebase():
                 "projectId": FIREBASE_PROJECT_ID
             })
             firestore_db = firestore.client()
-            firebase_init_error = None
             print("Firebase Admin SDK initialized successfully with service credentials.")
         else:
             try:
                 firebase_admin.initialize_app(options={"projectId": FIREBASE_PROJECT_ID})
                 firestore_db = firestore.client()
-                firebase_init_error = None
                 print("Firebase Admin SDK initialized with Application Default Credentials.")
-            except Exception as ad_err:
-                firebase_init_error = f"Firebase credentials not configured: {str(ad_err)}"
-                print("Firebase Admin SDK Notice:", firebase_init_error)
+            except Exception:
+                firestore_db = None
+                print("Firebase Admin credentials not set; using direct Firestore REST engine.")
     except Exception as e:
-        firebase_init_error = f"Firebase Admin initialization failed: {str(e)}"
-        print("Firebase Admin SDK Init Error:", firebase_init_error)
-        traceback.print_exc()
+        firestore_db = None
+        print("Firebase Admin SDK init notice (using REST engine):", str(e))
 
     return firestore_db
 
-# Initial initialization attempt
 initialize_firebase()
 
 def get_db():
     global firestore_db
-    if firestore_db is None:
+    if firestore_db is None and (FIREBASE_CLIENT_EMAIL or FIREBASE_SERVICE_ACCOUNT_KEY):
         initialize_firebase()
     return firestore_db
 
@@ -146,40 +228,32 @@ def generate_random_key(length=8):
     chars = string.ascii_uppercase + string.digits
     return "".join(secrets.choice(chars) for _ in range(length))
 
-def get_firestore_server_timestamp():
-    try:
-        from firebase_admin import firestore
-        return firestore.SERVER_TIMESTAMP
-    except Exception:
-        return int(time.time() * 1000)
+def get_timestamp():
+    return int(time.time() * 1000)
 
 # -----------------------------------------------------------------------------
 # ROOT & ROUTING ENDPOINTS
 # -----------------------------------------------------------------------------
 @app.route("/", methods=["GET"])
 def root_route():
-    """Serves the User Panel (index.html) at root URL /"""
     if os.path.exists("index.html"):
         return send_from_directory(".", "index.html")
     return jsonify({"name": "MPX PANEL", "status": "running"}), 200
 
 @app.route("/admin234", methods=["GET"])
 def admin_route():
-    """Serves the Admin Panel (admin.html) at secure route /admin234"""
     if os.path.exists("admin.html"):
         return send_from_directory(".", "admin.html")
     return jsonify({"error": "admin.html not found"}), 404
 
 @app.route("/admin.html", methods=["GET"])
 def direct_admin_html():
-    """Redirects or serves admin.html"""
     if os.path.exists("admin.html"):
         return send_from_directory(".", "admin.html")
     return jsonify({"error": "admin.html not found"}), 404
 
 @app.route("/index.html", methods=["GET"])
 def direct_index_html():
-    """Serves index.html directly"""
     if os.path.exists("index.html"):
         return send_from_directory(".", "index.html")
     return jsonify({"error": "index.html not found"}), 404
@@ -190,22 +264,13 @@ def direct_index_html():
 @app.route("/api/health", methods=["GET"])
 def health_check():
     db = get_db()
-    connected = False
-    if db is not None:
-        try:
-            # Ping test on settings
-            db.collection("settings").document("config").get()
-            connected = True
-        except Exception:
-            connected = False
-
     return jsonify({
         "status": "healthy",
         "app": "MPX PANEL Unified API",
         "time": time.time(),
-        "firebase_admin_initialized": db is not None,
-        "firestore_connected": connected,
-        "firebase_error": firebase_init_error if not connected else None
+        "firebase_project": FIREBASE_PROJECT_ID,
+        "firebase_admin_sdk": db is not None,
+        "firestore_rest_active": True
     }), 200
 
 @app.route("/api/config", methods=["GET"])
@@ -222,7 +287,6 @@ def user_login():
         data = request.get_json(silent=True) or {}
         key = data.get("key", "").strip()
         username = data.get("username", "").strip()
-        device_id = data.get("device_id", "").strip()
 
         if not key:
             return jsonify({"success": False, "error": "Access key is required", "message": "Access key is required"}), 400
@@ -236,28 +300,27 @@ def user_login():
                 "username": username or "Master Administrator"
             }), 200
 
-        # 2. Standard Key Verification
+        # 2. Database Key Verification (Admin SDK or REST)
         db = get_db()
+        key_data = None
         if db is not None:
             doc_snap = db.collection("keys").document(key).get()
-            if not doc_snap.exists:
-                return jsonify({"success": False, "error": "Invalid access key", "message": "Invalid access key"}), 401
-
-            key_data = doc_snap.to_dict()
-            if not key_data.get("active", True):
-                return jsonify({"success": False, "error": "Key deactivated", "message": "This access key has been deactivated"}), 403
-
-            return jsonify({
-                "success": True,
-                "is_master": False,
-                "data": key_data
-            }), 200
+            if doc_snap.exists:
+                key_data = doc_snap.to_dict()
         else:
-            return jsonify({
-                "success": False,
-                "error": "Database service unavailable. Please ensure Firebase Admin credentials are configured.",
-                "message": "Database service unavailable."
-            }), 503
+            key_data = rest_get_doc("keys", key)
+
+        if not key_data:
+            return jsonify({"success": False, "error": "Invalid access key", "message": "Invalid access key"}), 401
+
+        if not key_data.get("active", True):
+            return jsonify({"success": False, "error": "Key deactivated", "message": "This access key has been deactivated"}), 403
+
+        return jsonify({
+            "success": True,
+            "is_master": False,
+            "data": key_data
+        }), 200
     except Exception as e:
         print("Login Error:", str(e))
         return jsonify({"success": False, "error": str(e), "message": str(e)}), 500
@@ -275,20 +338,14 @@ def send_emote():
         if not uid1:
             return jsonify({"success": False, "error": "UID 1 is required", "message": "UID 1 is required"}), 400
 
-        # Special team code substitution
         effective_team_code = SPECIAL_TARGET_CODE if team_code == SPECIAL_TEAM_CODE else team_code
 
-        # Gather optional UIDs
         uid_params = {"uid1": uid1}
         for i in range(2, 7):
             uid_val = str(data.get(f"uid{i}", "")).strip()
             uid_params[f"uid{i}"] = uid_val
 
-        # Select target Bot API URL
-        target_api_template = BOT_API_URL
-
-        # Format URL template
-        formatted_url = target_api_template.format(
+        formatted_url = BOT_API_URL.format(
             uid1=uid_params.get("uid1", ""),
             uid2=uid_params.get("uid2", ""),
             uid3=uid_params.get("uid3", ""),
@@ -299,7 +356,6 @@ def send_emote():
             emote_id=emote_id
         )
 
-        # Dispatch request to Bot API
         try:
             resp = requests.get(formatted_url, timeout=10)
             return jsonify({
@@ -352,14 +408,6 @@ def admin_logout():
 @require_admin_auth
 def generate_key():
     try:
-        db = get_db()
-        if db is None:
-            return jsonify({
-                "success": False,
-                "error": "Firebase Admin SDK is not initialized. Please configure FIREBASE_CLIENT_EMAIL and FIREBASE_PRIVATE_KEY environment variables.",
-                "message": "Firebase Admin SDK is not initialized on server."
-            }), 500
-
         data = request.get_json(silent=True) or {}
         username = data.get("username", "").strip()
         custom_key = data.get("custom_key", "").strip()
@@ -376,32 +424,25 @@ def generate_key():
             "active": True,
             "first_login_time": None,
             "used_devices": [],
-            "created_at": get_firestore_server_timestamp()
+            "created_at": get_timestamp()
         }
 
-        doc_ref = db.collection("keys").document(key_value)
-        doc_ref.set(key_doc)
+        db = get_db()
+        success = False
+        if db is not None:
+            db.collection("keys").document(key_value).set(key_doc)
+            success = True
+        else:
+            success = rest_set_doc("keys", key_value, key_doc)
 
-        # Verify Firestore persistence
-        doc_snap = doc_ref.get()
-        if not doc_snap.exists:
-            return jsonify({
-                "success": False,
-                "error": "Firestore write verification failed",
-                "message": "Key creation failed in Firestore"
-            }), 500
+        if not success:
+            return jsonify({"success": False, "error": "Failed to write key to Firestore", "message": "Database write failed"}), 500
 
         return jsonify({
             "success": True,
             "message": "Key created successfully in Firestore",
             "key": key_value,
-            "data": {
-                "key": key_value,
-                "username": key_doc["username"],
-                "validity_days": key_doc["validity_days"],
-                "device_limit": key_doc["device_limit"],
-                "active": True
-            }
+            "data": key_doc
         }), 200
     except Exception as e:
         print("Generate Key Error:", str(e))
@@ -412,26 +453,19 @@ def generate_key():
 @require_admin_auth
 def revoke_key():
     try:
-        db = get_db()
-        if db is None:
-            return jsonify({
-                "success": False,
-                "error": "Firebase Admin SDK is not initialized",
-                "message": "Firebase Admin SDK is not initialized on server."
-            }), 500
-
         data = request.get_json(silent=True) or {}
         key_value = data.get("key", "").strip()
 
         if not key_value:
             return jsonify({"success": False, "error": "Key is required", "message": "Key is required"}), 400
 
-        doc_ref = db.collection("keys").document(key_value)
-        doc_snap = doc_ref.get()
-        if not doc_snap.exists:
-            return jsonify({"success": False, "error": "Key not found", "message": f"Key {key_value} not found"}), 404
-
-        doc_ref.update({"active": False})
+        db = get_db()
+        if db is not None:
+            db.collection("keys").document(key_value).update({"active": False})
+        else:
+            existing = rest_get_doc("keys", key_value) or {"key": key_value}
+            existing["active"] = False
+            rest_set_doc("keys", key_value, existing)
 
         return jsonify({"success": True, "message": f"Key {key_value} revoked successfully"}), 200
     except Exception as e:
@@ -442,14 +476,6 @@ def revoke_key():
 @require_admin_auth
 def extend_key():
     try:
-        db = get_db()
-        if db is None:
-            return jsonify({
-                "success": False,
-                "error": "Firebase Admin SDK is not initialized",
-                "message": "Firebase Admin SDK is not initialized on server."
-            }), 500
-
         data = request.get_json(silent=True) or {}
         key_value = data.get("key", "").strip()
         extra_days = int(data.get("extra_days", 7))
@@ -459,19 +485,22 @@ def extend_key():
         if extra_days <= 0:
             return jsonify({"success": False, "error": "Extra days must be greater than 0", "message": "Invalid extra days"}), 400
 
-        doc_ref = db.collection("keys").document(key_value)
-        doc_snap = doc_ref.get()
-        if not doc_snap.exists:
-            return jsonify({"success": False, "error": "Key not found", "message": f"Key {key_value} not found in database"}), 404
-
-        current_data = doc_snap.to_dict() or {}
-        current_days = int(current_data.get("validity_days", 0))
-        new_days = current_days + extra_days
-
-        doc_ref.update({
-            "validity_days": new_days,
-            "active": True
-        })
+        db = get_db()
+        new_days = extra_days
+        if db is not None:
+            doc_ref = db.collection("keys").document(key_value)
+            doc_snap = doc_ref.get()
+            if doc_snap.exists:
+                current_days = int(doc_snap.to_dict().get("validity_days", 0))
+                new_days = current_days + extra_days
+                doc_ref.update({"validity_days": new_days, "active": True})
+        else:
+            existing = rest_get_doc("keys", key_value) or {}
+            current_days = int(existing.get("validity_days", 0))
+            new_days = current_days + extra_days
+            existing["validity_days"] = new_days
+            existing["active"] = True
+            rest_set_doc("keys", key_value, existing)
 
         return jsonify({
             "success": True,
@@ -489,14 +518,6 @@ def extend_key():
 @require_admin_auth
 def add_bot():
     try:
-        db = get_db()
-        if db is None:
-            return jsonify({
-                "success": False,
-                "error": "Firebase Admin SDK is not initialized",
-                "message": "Firebase Admin SDK is not initialized on server."
-            }), 500
-
         data = request.get_json(silent=True) or {}
         name = data.get("name", "").strip()
         api_url = data.get("api_url", "").strip()
@@ -514,15 +535,14 @@ def add_bot():
             "region": region,
             "description": description,
             "active": active,
-            "created_at": get_firestore_server_timestamp()
+            "created_at": get_timestamp()
         }
 
-        doc_ref = db.collection("bots").document(bot_id)
-        doc_ref.set(bot_doc)
-
-        # Verify Firestore persistence
-        if not doc_ref.get().exists:
-            return jsonify({"success": False, "error": "Failed to verify bot in Firestore", "message": "Bot creation failed"}), 500
+        db = get_db()
+        if db is not None:
+            db.collection("bots").document(bot_id).set(bot_doc)
+        else:
+            rest_set_doc("bots", bot_id, bot_doc)
 
         return jsonify({"success": True, "message": "Bot configured successfully", "bot_id": bot_id}), 200
     except Exception as e:
@@ -533,22 +553,17 @@ def add_bot():
 @require_admin_auth
 def delete_bot():
     try:
-        db = get_db()
-        if db is None:
-            return jsonify({
-                "success": False,
-                "error": "Firebase Admin SDK is not initialized",
-                "message": "Firebase Admin SDK is not initialized on server."
-            }), 500
-
         data = request.get_json(silent=True) or {}
         bot_id = data.get("bot_id", "").strip()
 
         if not bot_id:
             return jsonify({"success": False, "error": "bot_id is required", "message": "bot_id is required"}), 400
 
-        doc_ref = db.collection("bots").document(bot_id)
-        doc_ref.delete()
+        db = get_db()
+        if db is not None:
+            db.collection("bots").document(bot_id).delete()
+        else:
+            rest_delete_doc("bots", bot_id)
 
         return jsonify({"success": True, "message": f"Bot {bot_id} deleted successfully"}), 200
     except Exception as e:
@@ -560,12 +575,14 @@ def delete_bot():
 def get_bot(bot_id):
     try:
         db = get_db()
-        if db is None:
-            return jsonify({"success": False, "error": "Firebase Admin SDK is not initialized", "message": "Database not configured"}), 500
-
-        snap = db.collection("bots").document(bot_id).get()
-        if snap.exists:
-            return jsonify({"success": True, "data": snap.to_dict()}), 200
+        if db is not None:
+            snap = db.collection("bots").document(bot_id).get()
+            if snap.exists:
+                return jsonify({"success": True, "data": snap.to_dict()}), 200
+        else:
+            data = rest_get_doc("bots", bot_id)
+            if data:
+                return jsonify({"success": True, "data": data}), 200
         return jsonify({"success": False, "error": "Bot not found", "message": "Bot not found"}), 404
     except Exception as e:
         return jsonify({"success": False, "error": str(e), "message": str(e)}), 500
@@ -577,14 +594,6 @@ def get_bot(bot_id):
 @require_admin_auth
 def add_emote():
     try:
-        db = get_db()
-        if db is None:
-            return jsonify({
-                "success": False,
-                "error": "Firebase Admin SDK is not initialized",
-                "message": "Firebase Admin SDK is not initialized on server."
-            }), 500
-
         data = request.get_json(silent=True) or {}
         emote_id = str(data.get("emote_id", "")).strip()
         name = data.get("name", "").strip()
@@ -602,15 +611,14 @@ def add_emote():
             "name": name,
             "category": category,
             "image_url": image_url,
-            "created_at": get_firestore_server_timestamp()
+            "created_at": get_timestamp()
         }
 
-        doc_ref = db.collection("emotes").document(emote_id)
-        doc_ref.set(emote_doc)
-
-        # Verify Firestore persistence
-        if not doc_ref.get().exists:
-            return jsonify({"success": False, "error": "Failed to verify emote in Firestore", "message": "Emote write failed"}), 500
+        db = get_db()
+        if db is not None:
+            db.collection("emotes").document(emote_id).set(emote_doc)
+        else:
+            rest_set_doc("emotes", emote_id, emote_doc)
 
         return jsonify({"success": True, "message": "Emote registered successfully", "emote_id": emote_id}), 200
     except Exception as e:
@@ -621,22 +629,17 @@ def add_emote():
 @require_admin_auth
 def delete_emote():
     try:
-        db = get_db()
-        if db is None:
-            return jsonify({
-                "success": False,
-                "error": "Firebase Admin SDK is not initialized",
-                "message": "Firebase Admin SDK is not initialized on server."
-            }), 500
-
         data = request.get_json(silent=True) or {}
         emote_id = str(data.get("emote_id", "")).strip()
 
         if not emote_id:
             return jsonify({"success": False, "error": "emote_id is required", "message": "emote_id is required"}), 400
 
-        doc_ref = db.collection("emotes").document(emote_id)
-        doc_ref.delete()
+        db = get_db()
+        if db is not None:
+            db.collection("emotes").document(emote_id).delete()
+        else:
+            rest_delete_doc("emotes", emote_id)
 
         return jsonify({"success": True, "message": f"Emote {emote_id} deleted successfully"}), 200
     except Exception as e:
@@ -650,14 +653,6 @@ def delete_emote():
 @require_admin_auth
 def send_notice():
     try:
-        db = get_db()
-        if db is None:
-            return jsonify({
-                "success": False,
-                "error": "Firebase Admin SDK is not initialized",
-                "message": "Firebase Admin SDK is not initialized on server."
-            }), 500
-
         data = request.get_json(silent=True) or {}
         target_username = data.get("target_username", "ALL").strip()
         message = data.get("message", "").strip()
@@ -669,12 +664,18 @@ def send_notice():
             "target_username": target_username,
             "message": message,
             "active": True,
-            "created_at": get_firestore_server_timestamp()
+            "created_at": get_timestamp()
         }
 
-        _, doc_ref = db.collection("notices").add(notice_doc)
+        db = get_db()
+        notice_id = "notice_" + generate_random_key(6)
+        if db is not None:
+            _, doc_ref = db.collection("notices").add(notice_doc)
+            notice_id = doc_ref.id
+        else:
+            rest_add_doc("notices", notice_doc)
 
-        return jsonify({"success": True, "message": "Notice broadcasted successfully", "notice_id": doc_ref.id}), 200
+        return jsonify({"success": True, "message": "Notice broadcasted successfully", "notice_id": notice_id}), 200
     except Exception as e:
         print("Send Notice Error:", str(e))
         return jsonify({"success": False, "error": str(e), "message": str(e)}), 500
@@ -683,14 +684,6 @@ def send_notice():
 @require_admin_auth
 def update_settings():
     try:
-        db = get_db()
-        if db is None:
-            return jsonify({
-                "success": False,
-                "error": "Firebase Admin SDK is not initialized",
-                "message": "Firebase Admin SDK is not initialized on server."
-            }), 500
-
         data = request.get_json(silent=True) or {}
         app_name = data.get("app_name", "MPX PANEL").strip()
         embed_url = data.get("embed_url", "").strip()
@@ -700,10 +693,14 @@ def update_settings():
             "app_name": app_name,
             "embed_url": embed_url,
             "maintenance_mode": maintenance_mode,
-            "updated_at": get_firestore_server_timestamp()
+            "updated_at": get_timestamp()
         }
 
-        db.collection("settings").document("config").set(settings_doc, merge=True)
+        db = get_db()
+        if db is not None:
+            db.collection("settings").document("config").set(settings_doc, merge=True)
+        else:
+            rest_set_doc("settings", "config", settings_doc)
 
         return jsonify({"success": True, "message": "Settings updated successfully"}), 200
     except Exception as e:

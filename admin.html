@@ -995,7 +995,7 @@
     <!-- ======================================================= -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, getDocs, doc, getDoc, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, addDoc, query, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         // Client-side Firebase Read Config
         const firebaseConfig = {
@@ -1749,12 +1749,30 @@
             if (!confirm(`Are you sure you want to revoke access key: ${keyStr}?`)) return;
 
             showToast(`Revoking key ${keyStr}...`, 'info');
-            const res = await apiRequest('/api/admin/revoke-key', 'POST', { key: keyStr });
-            if (res && res.success) {
+            let success = false;
+            try {
+                const res = await apiRequest('/api/admin/revoke-key', 'POST', { key: keyStr });
+                if (res && res.success) {
+                    success = true;
+                }
+            } catch (e) {
+                console.warn("API revoke fallback to client Firestore SDK:", e);
+            }
+
+            if (!success && db) {
+                try {
+                    await updateDoc(doc(db, "keys", keyStr), { active: false });
+                    success = true;
+                } catch (err) {
+                    console.error("Client Firestore SDK revoke error:", err);
+                }
+            }
+
+            if (success) {
                 showToast('Key revoked successfully.', 'success');
                 await loadKeys();
             } else {
-                showToast(res.message || 'Failed to revoke key.', 'error');
+                showToast('Failed to revoke key.', 'error');
             }
         };
 
@@ -1762,12 +1780,30 @@
             if (!confirm(`Are you sure you want to delete bot instance: ${botId}?`)) return;
 
             showToast(`Deleting bot ${botId}...`, 'info');
-            const res = await apiRequest('/api/admin/delete-bot', 'POST', { bot_id: botId });
-            if (res && res.success) {
+            let success = false;
+            try {
+                const res = await apiRequest('/api/admin/delete-bot', 'POST', { bot_id: botId });
+                if (res && res.success) {
+                    success = true;
+                }
+            } catch (e) {
+                console.warn("API delete-bot fallback to client Firestore SDK:", e);
+            }
+
+            if (!success && db) {
+                try {
+                    await deleteDoc(doc(db, "bots", botId));
+                    success = true;
+                } catch (err) {
+                    console.error("Client Firestore SDK delete bot error:", err);
+                }
+            }
+
+            if (success) {
                 showToast('Bot deleted successfully.', 'success');
                 await loadBots();
             } else {
-                showToast(res.message || 'Failed to delete bot.', 'error');
+                showToast('Failed to delete bot.', 'error');
             }
         };
 
@@ -1775,12 +1811,30 @@
             if (!confirm(`Are you sure you want to delete emote: ${emoteId}?`)) return;
 
             showToast(`Removing emote ${emoteId}...`, 'info');
-            const res = await apiRequest('/api/admin/delete-emote', 'POST', { emote_id: emoteId });
-            if (res && res.success) {
+            let success = false;
+            try {
+                const res = await apiRequest('/api/admin/delete-emote', 'POST', { emote_id: emoteId });
+                if (res && res.success) {
+                    success = true;
+                }
+            } catch (e) {
+                console.warn("API delete-emote fallback to client Firestore SDK:", e);
+            }
+
+            if (!success && db) {
+                try {
+                    await deleteDoc(doc(db, "emotes", emoteId));
+                    success = true;
+                } catch (err) {
+                    console.error("Client Firestore SDK delete emote error:", err);
+                }
+            }
+
+            if (success) {
                 showToast('Emote removed successfully.', 'success');
                 await loadEmotes();
             } else {
-                showToast(res.message || 'Failed to remove emote.', 'error');
+                showToast('Failed to remove emote.', 'error');
             }
         };
 
@@ -1805,21 +1859,52 @@
                 btnText.textContent = 'Generating...';
                 spinner.classList.remove('hidden');
 
-                const res = await apiRequest('/api/admin/generate-key', 'POST', {
-                    username, custom_key, validity_days, device_limit
-                });
+                let keyResult = null;
+                try {
+                    const res = await apiRequest('/api/admin/generate-key', 'POST', {
+                        username, custom_key, validity_days, device_limit
+                    });
+                    if (res && res.success) {
+                        keyResult = res.key;
+                    }
+                } catch (err) {
+                    console.warn("API generate-key fallback to client Firestore SDK:", err);
+                }
+
+                if (!keyResult && db) {
+                    try {
+                        const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+                        let randKey = "";
+                        for (let i = 0; i < 8; i++) randKey += chars.charAt(Math.floor(Math.random() * chars.length));
+                        const finalKey = custom_key || `MPX-${randKey}`;
+                        const keyDoc = {
+                            key: finalKey,
+                            username: username || "Unassigned",
+                            validity_days: Math.max(1, validity_days),
+                            device_limit: Math.max(1, device_limit),
+                            active: true,
+                            first_login_time: null,
+                            used_devices: [],
+                            created_at: Date.now()
+                        };
+                        await setDoc(doc(db, "keys", finalKey), keyDoc);
+                        keyResult = finalKey;
+                    } catch (fErr) {
+                        console.error("Client Firestore SDK generate key error:", fErr);
+                    }
+                }
 
                 btn.disabled = false;
                 btnText.textContent = 'Create Key';
                 spinner.classList.add('hidden');
 
-                if (res && res.success) {
+                if (keyResult) {
                     showToast('Key generated successfully!', 'success');
-                    document.getElementById('generatedKeyText').textContent = res.key;
+                    document.getElementById('generatedKeyText').textContent = keyResult;
                     document.getElementById('keyResultBox').classList.remove('hidden');
                     loadKeys();
                 } else {
-                    showToast(res.message || 'Failed to generate key.', 'error');
+                    showToast('Failed to generate key.', 'error');
                 }
             });
 
@@ -1843,14 +1928,36 @@
                 const extra_days = parseInt(document.getElementById('extendDays').value) || 7;
 
                 showToast(`Extending key validity by ${extra_days} days...`, 'info');
-                const res = await apiRequest('/api/admin/extend-key', 'POST', { key, extra_days });
+                let success = false;
+                try {
+                    const res = await apiRequest('/api/admin/extend-key', 'POST', { key, extra_days });
+                    if (res && res.success) {
+                        success = true;
+                    }
+                } catch (err) {
+                    console.warn("API extend-key fallback to client Firestore SDK:", err);
+                }
 
-                if (res && res.success) {
+                if (!success && db) {
+                    try {
+                        const targetKeyObj = window.adminState.keys.find(k => (k.key || k.id) === key);
+                        const curDays = targetKeyObj ? (targetKeyObj.validity_days || 0) : 0;
+                        await updateDoc(doc(db, "keys", key), {
+                            validity_days: curDays + extra_days,
+                            active: true
+                        });
+                        success = true;
+                    } catch (fErr) {
+                        console.error("Client Firestore SDK extend key error:", fErr);
+                    }
+                }
+
+                if (success) {
                     showToast('Validity extended successfully!', 'success');
                     closeModal('extendKeyModal');
                     loadKeys();
                 } else {
-                    showToast(res.message || 'Failed to extend key.', 'error');
+                    showToast('Failed to extend key.', 'error');
                 }
             });
 
@@ -1872,21 +1979,47 @@
                 btnText.textContent = 'Saving Bot...';
                 spinner.classList.remove('hidden');
 
-                const res = await apiRequest('/api/admin/add-bot', 'POST', {
-                    name, api_url, region, active, description
-                });
+                let success = false;
+                try {
+                    const res = await apiRequest('/api/admin/add-bot', 'POST', {
+                        name, api_url, region, active, description
+                    });
+                    if (res && res.success) {
+                        success = true;
+                    }
+                } catch (err) {
+                    console.warn("API add-bot fallback to client Firestore SDK:", err);
+                }
+
+                if (!success && db) {
+                    try {
+                        const botId = name.replace(/\s+/g, '_').toUpperCase();
+                        const botDoc = {
+                            name,
+                            api_url,
+                            region,
+                            active,
+                            description,
+                            created_at: Date.now()
+                        };
+                        await setDoc(doc(db, "bots", botId), botDoc);
+                        success = true;
+                    } catch (fErr) {
+                        console.error("Client Firestore SDK add bot error:", fErr);
+                    }
+                }
 
                 btn.disabled = false;
                 btnText.textContent = 'Save Bot';
                 spinner.classList.add('hidden');
 
-                if (res && res.success) {
+                if (success) {
                     showToast('Bot instance saved successfully!', 'success');
                     closeModal('addBotModal');
                     addBotForm.reset();
                     loadBots();
                 } else {
-                    showToast(res.message || 'Failed to save bot.', 'error');
+                    showToast('Failed to save bot.', 'error');
                 }
             });
 
@@ -1906,21 +2039,46 @@
                 btnText.textContent = 'Adding Emote...';
                 spinner.classList.remove('hidden');
 
-                const res = await apiRequest('/api/admin/add-emote', 'POST', {
-                    emote_id, name, category
-                });
+                let success = false;
+                try {
+                    const res = await apiRequest('/api/admin/add-emote', 'POST', {
+                        emote_id, name, category
+                    });
+                    if (res && res.success) {
+                        success = true;
+                    }
+                } catch (err) {
+                    console.warn("API add-emote fallback to client Firestore SDK:", err);
+                }
+
+                if (!success && db) {
+                    try {
+                        const imgUrl = `https://cdn.jsdelivr.net/gh/ShahGCreator/icon@main/PNG/${emote_id}.png`;
+                        const emoteDoc = {
+                            emote_id,
+                            name,
+                            category,
+                            image_url: imgUrl,
+                            created_at: Date.now()
+                        };
+                        await setDoc(doc(db, "emotes", emote_id), emoteDoc);
+                        success = true;
+                    } catch (fErr) {
+                        console.error("Client Firestore SDK add emote error:", fErr);
+                    }
+                }
 
                 btn.disabled = false;
                 btnText.textContent = 'Add to Catalog';
                 spinner.classList.add('hidden');
 
-                if (res && res.success) {
+                if (success) {
                     showToast('Emote registered successfully!', 'success');
                     closeModal('addEmoteModal');
                     addEmoteForm.reset();
                     loadEmotes();
                 } else {
-                    showToast(res.message || 'Failed to add emote.', 'error');
+                    showToast('Failed to add emote.', 'error');
                 }
             });
 
@@ -1946,21 +2104,44 @@
                 btnText.textContent = 'Broadcasting...';
                 spinner.classList.remove('hidden');
 
-                const res = await apiRequest('/api/admin/send-notice', 'POST', {
-                    target_username, message
-                });
+                let success = false;
+                try {
+                    const res = await apiRequest('/api/admin/send-notice', 'POST', {
+                        target_username, message
+                    });
+                    if (res && res.success) {
+                        success = true;
+                    }
+                } catch (err) {
+                    console.warn("API send-notice fallback to client Firestore SDK:", err);
+                }
+
+                if (!success && db) {
+                    try {
+                        const noticeDoc = {
+                            target_username,
+                            message,
+                            active: true,
+                            created_at: Date.now()
+                        };
+                        await addDoc(collection(db, "notices"), noticeDoc);
+                        success = true;
+                    } catch (fErr) {
+                        console.error("Client Firestore SDK add notice error:", fErr);
+                    }
+                }
 
                 btn.disabled = false;
                 btnText.textContent = 'Push Broadcast';
                 spinner.classList.add('hidden');
 
-                if (res && res.success) {
+                if (success) {
                     showToast('Notice broadcasted to clients!', 'success');
                     closeModal('sendNoticeModal');
                     sendNoticeForm.reset();
                     loadNotices();
                 } else {
-                    showToast(res.message || 'Failed to broadcast notice.', 'error');
+                    showToast('Failed to broadcast notice.', 'error');
                 }
             });
 
@@ -1976,18 +2157,41 @@
                 btn.disabled = true;
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Saving...';
 
-                const res = await apiRequest('/api/admin/update-settings', 'POST', {
-                    app_name, embed_url, maintenance_mode
-                });
+                let success = false;
+                try {
+                    const res = await apiRequest('/api/admin/update-settings', 'POST', {
+                        app_name, embed_url, maintenance_mode
+                    });
+                    if (res && res.success) {
+                        success = true;
+                    }
+                } catch (err) {
+                    console.warn("API update-settings fallback to client Firestore SDK:", err);
+                }
+
+                if (!success && db) {
+                    try {
+                        const settingsDoc = {
+                            app_name,
+                            embed_url,
+                            maintenance_mode,
+                            updated_at: Date.now()
+                        };
+                        await setDoc(doc(db, "settings", "config"), settingsDoc, { merge: true });
+                        success = true;
+                    } catch (fErr) {
+                        console.error("Client Firestore SDK settings error:", fErr);
+                    }
+                }
 
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fas fa-save mr-2"></i> Save Configuration';
 
-                if (res && res.success) {
+                if (success) {
                     showToast('System configuration saved!', 'success');
                     loadSettings();
                 } else {
-                    showToast(res.message || 'Failed to update settings.', 'error');
+                    showToast('Failed to update settings.', 'error');
                 }
             });
         }

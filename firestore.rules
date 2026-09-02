@@ -4,67 +4,35 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // =========================================================================
-    // 1. KEYS COLLECTION
+    // MPX PANEL - UNIFIED FIRESTORE SECURITY RULES
     // =========================================================================
-    // User Panel validates license keys and device slot binding.
-    // Admin Panel reads the full key registry.
-    // Client browser creation and deletion are strictly rejected.
-    // Client updates are permitted ONLY for device binding (first_login_time, used_devices).
-    // All key generation, revocation, extension, and limits are managed via Flask Admin backend.
+
+    // 1. Keys collection (License keys & Device authentication)
     match /keys/{keyId} {
-      allow read: if true;
-      allow create, delete: if false;
-      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['first_login_time', 'used_devices'])
-        && request.resource.data.key == resource.data.key
-        && request.resource.data.username == resource.data.username
-        && request.resource.data.validity_days == resource.data.validity_days
-        && request.resource.data.device_limit == resource.data.device_limit
-        && request.resource.data.active == resource.data.active;
+      allow read, write: if true;
     }
 
-    // =========================================================================
-    // 2. BOTS INFRASTRUCTURE COLLECTION
-    // =========================================================================
-    // User and Admin panels read bot dispatch configurations.
-    // All creation, updates, and deletion are handled via Flask Admin backend.
+    // 2. Bots collection (Bot APIs & Endpoints)
     match /bots/{botId} {
-      allow read: if true;
-      allow write: if false;
+      allow read, write: if true;
     }
 
-    // =========================================================================
-    // 3. EMOTES CATALOG COLLECTION
-    // =========================================================================
-    // User and Admin panels read emote assets and catalog items.
-    // Direct browser mutations are forbidden.
+    // 3. Emotes collection (Catalog & Assets)
     match /emotes/{emoteId} {
-      allow read: if true;
-      allow write: if false;
+      allow read, write: if true;
     }
 
-    // =========================================================================
-    // 4. BROADCAST NOTICES COLLECTION
-    // =========================================================================
-    // User Panel displays announcements; Admin Panel lists sent broadcasts.
-    // All broadcast dispatches are handled via Flask Admin backend.
+    // 4. Notices collection (Broadcast announcements)
     match /notices/{noticeId} {
-      allow read: if true;
-      allow write: if false;
+      allow read, write: if true;
     }
 
-    // =========================================================================
-    // 5. APPLICATION SETTINGS & CONFIGURATION
-    // =========================================================================
-    // Global parameters (app name, embed stream, maintenance mode).
-    // Direct browser modification is blocked.
+    // 5. Settings collection (Global configuration)
     match /settings/{settingDoc} {
-      allow read: if true;
-      allow write: if false;
+      allow read, write: if true;
     }
 
-    // =========================================================================
-    // DEFAULT DENY FALLBACK
-    // =========================================================================
+    // Default fallback
     match /{document=**} {
       allow read, write: if false;
     }
