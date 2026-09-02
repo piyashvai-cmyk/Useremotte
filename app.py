@@ -332,6 +332,8 @@ def send_emote():
         team_code = str(data.get("team_code", "")).strip()
         emote_id = str(data.get("emote_id", DEFAULT_EMOTE_ID)).strip()
         uid1 = str(data.get("uid1", "")).strip()
+        bot_url_param = str(data.get("bot_url", "")).strip()
+        bot_id_param = str(data.get("bot_id", "")).strip()
 
         if not team_code:
             return jsonify({"success": False, "error": "Team Code is required", "message": "Team Code is required"}), 400
@@ -345,16 +347,37 @@ def send_emote():
             uid_val = str(data.get(f"uid{i}", "")).strip()
             uid_params[f"uid{i}"] = uid_val
 
-        formatted_url = BOT_API_URL.format(
-            uid1=uid_params.get("uid1", ""),
-            uid2=uid_params.get("uid2", ""),
-            uid3=uid_params.get("uid3", ""),
-            uid4=uid_params.get("uid4", ""),
-            uid5=uid_params.get("uid5", ""),
-            uid6=uid_params.get("uid6", ""),
-            team_code=effective_team_code,
-            emote_id=emote_id
-        )
+        # Select target BOT template URL
+        target_template = BOT_API_URL
+        if bot_url_param:
+            target_template = bot_url_param
+        elif bot_id_param and bot_id_param != "BOT-1":
+            # Lookup custom bot URL from DB if available
+            db = get_db()
+            bot_doc = None
+            if db is not None:
+                snap = db.collection("bots").document(bot_id_param).get()
+                if snap.exists:
+                    bot_doc = snap.to_dict()
+            else:
+                bot_doc = rest_get_doc("bots", bot_id_param)
+
+            if bot_doc and (bot_doc.get("api_url") or bot_doc.get("url")):
+                target_template = bot_doc.get("api_url") or bot_doc.get("url")
+
+        try:
+            formatted_url = target_template.format(
+                uid1=uid_params.get("uid1", ""),
+                uid2=uid_params.get("uid2", ""),
+                uid3=uid_params.get("uid3", ""),
+                uid4=uid_params.get("uid4", ""),
+                uid5=uid_params.get("uid5", ""),
+                uid6=uid_params.get("uid6", ""),
+                team_code=effective_team_code,
+                emote_id=emote_id
+            )
+        except Exception:
+            formatted_url = target_template
 
         try:
             resp = requests.get(formatted_url, timeout=10)

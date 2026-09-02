@@ -955,7 +955,8 @@
       query,
       where,
       updateDoc,
-      serverTimestamp
+      serverTimestamp,
+      onSnapshot
     } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -1381,7 +1382,9 @@
       const payload = {
         team_code: teamCode,
         emote_id: emoteToSend,
-        uid1: uid1
+        uid1: uid1,
+        bot_id: selectedBot ? selectedBot.id : "",
+        bot_url: selectedBot ? (selectedBot.api_url || selectedBot.url || "") : ""
       };
 
       // Add all optional UIDs
@@ -1513,7 +1516,7 @@
       card.className = `emote-card ${isSelected ? 'selected' : ''}`;
       card.dataset.emoteId = emote.id;
 
-      const imgUrl = `https://cdn.jsdelivr.net/gh/ShahGCreator/icon@main/PNG/${emote.id}.png`;
+      const imgUrl = emote.image_url || `https://cdn.jsdelivr.net/gh/ShahGCreator/icon@main/PNG/${emote.id}.png`;
 
       card.innerHTML = `
         <div class="selected-badge"><i class="fas fa-check"></i></div>
@@ -1584,68 +1587,90 @@
     // ==========================================
     // 13. EMOTES, BOTS & SETTINGS & NOTICES
     // ==========================================
-    async function loadEmotes() {
+    function setupEmotesListener() {
       try {
-        const snap = await getDocs(collection(db, "emotes"));
-        const list = [];
-        snap.forEach(docSnap => {
-          const d = docSnap.data();
-          list.push({
-            id: d.emote_id || docSnap.id,
-            name: d.name || "Emote",
-            category: (d.category || "ALL").toUpperCase(),
-            image_url: d.image_url || ""
+        const emotesRef = collection(db, "emotes");
+        onSnapshot(emotesRef, (snap) => {
+          const list = [];
+          snap.forEach(docSnap => {
+            const d = docSnap.data();
+            list.push({
+              id: d.emote_id || docSnap.id,
+              name: d.name || "Emote",
+              category: (d.category || "ALL").toUpperCase(),
+              image_url: d.image_url || `https://cdn.jsdelivr.net/gh/ShahGCreator/icon@main/PNG/${d.emote_id || docSnap.id}.png`
+            });
           });
-        });
-        if (list.length > 0) {
-          const existingIds = new Set(list.map(e => e.id));
+
+          // Always merge default emotes with custom emotes from Firestore
+          const customIds = new Set(list.map(e => String(e.id)));
+          const merged = [...list];
           DEFAULT_EMOTES.forEach(def => {
-            if (!existingIds.has(def.id)) {
-              list.push(def);
+            if (!customIds.has(String(def.id))) {
+              merged.push(def);
             }
           });
-          allEmotes = list;
+
+          allEmotes = merged;
           renderEmotes();
-        }
+        }, (err) => {
+          console.warn("Emotes real-time sync error:", err);
+          allEmotes = [...DEFAULT_EMOTES];
+          renderEmotes();
+        });
       } catch (err) {
-        console.warn("Emotes fetch error from Firestore:", err);
+        console.warn("Setup emotes listener error:", err);
       }
     }
 
-    async function loadBots() {
+    async function loadEmotes() {
+      setupEmotesListener();
+    }
+
+    function setupBotsListener() {
       const select = document.getElementById("botSelect");
       if (!select) return;
 
       try {
         const botsRef = collection(db, "bots");
         const q = query(botsRef, where("active", "==", true));
-        const snap = await getDocs(q);
+        onSnapshot(q, (snap) => {
+          const bots = [];
+          snap.forEach(docSnap => {
+            const data = docSnap.data();
+            bots.push({ id: docSnap.id, ...data });
+          });
 
-        activeBots = [];
-        snap.forEach(docSnap => {
-          const data = docSnap.data();
-          activeBots.push({ id: docSnap.id, ...data });
-        });
+          activeBots = bots.length > 0 ? bots : [{ id: "BOT-1", name: "BOT-1 (Primary)", active: true }];
 
-        if (activeBots.length === 0) {
+          const prevVal = select.value;
+          select.innerHTML = "";
+          activeBots.forEach((bot, index) => {
+            const opt = document.createElement("option");
+            opt.value = bot.id;
+            opt.innerText = bot.name || `BOT-${index + 1}`;
+            select.appendChild(opt);
+          });
+
+          if (prevVal && activeBots.some(b => b.id === prevVal)) {
+            select.value = prevVal;
+            selectedBot = activeBots.find(b => b.id === prevVal);
+          } else {
+            selectedBot = activeBots[0];
+          }
+        }, (err) => {
+          console.warn("Bots real-time sync error:", err);
           activeBots = [{ id: "BOT-1", name: "BOT-1 (Primary)", active: true }];
-        }
-
-        select.innerHTML = "";
-        activeBots.forEach((bot, index) => {
-          const opt = document.createElement("option");
-          opt.value = bot.id;
-          opt.innerText = bot.name || `BOT-${index + 1}`;
-          select.appendChild(opt);
+          select.innerHTML = `<option value="BOT-1">BOT-1 (Primary)</option>`;
+          selectedBot = activeBots[0];
         });
-
-        selectedBot = activeBots[0];
       } catch (err) {
-        console.warn("Bots fetch error:", err);
-        activeBots = [{ id: "BOT-1", name: "BOT-1 (Primary)", active: true }];
-        select.innerHTML = `<option value="BOT-1">BOT-1 (Primary)</option>`;
-        selectedBot = activeBots[0];
+        console.warn("Setup bots listener error:", err);
       }
+    }
+
+    async function loadBots() {
+      setupBotsListener();
     }
 
     window.handleBotChange = function() {
@@ -1660,65 +1685,83 @@
       window.playClickSound();
     };
 
-    async function loadNotices() {
+    function setupNoticesListener() {
       const container = document.getElementById("noticesArea");
-      if (!container || !currentUserSession) return;
+      if (!container) return;
 
       try {
         const noticesRef = collection(db, "notices");
-        const snap = await getDocs(noticesRef);
+        onSnapshot(noticesRef, (snap) => {
+          if (!currentUserSession) return;
+          const list = [];
+          snap.forEach(docSnap => {
+            const d = docSnap.data();
+            if (d.active) {
+              const target = d.target_username || "ALL";
+              if (target === "ALL" || target === currentUserSession.username) {
+                list.push(d);
+              }
+            }
+          });
 
-        const list = [];
-        snap.forEach(docSnap => {
-          const d = docSnap.data();
-          if (d.active) {
-            const target = d.target_username || "ALL";
-            if (target === "ALL" || target === currentUserSession.username) {
-              list.push(d);
+          if (list.length > 0) {
+            container.innerHTML = "";
+            list.forEach(item => {
+              const nDiv = document.createElement("div");
+              nDiv.className = "p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-200 text-xs flex items-center gap-3";
+              nDiv.innerHTML = `
+                <i class="fas fa-bullhorn text-amber-400 text-base"></i>
+                <span class="flex-1">${item.message || ""}</span>
+              `;
+              container.appendChild(nDiv);
+            });
+            container.classList.remove("hidden");
+          } else {
+            container.classList.add("hidden");
+          }
+        }, (err) => {
+          console.warn("Notices sync error:", err);
+        });
+      } catch (err) {
+        console.warn("Setup notices listener error:", err);
+      }
+    }
+
+    async function loadNotices() {
+      setupNoticesListener();
+    }
+
+    function setupSettingsListener() {
+      try {
+        const docRef = doc(db, "settings", "config");
+        onSnapshot(docRef, (snap) => {
+          if (snap.exists()) {
+            const config = snap.data();
+            if (config.app_name) {
+              document.title = config.app_name;
+              const logoTitle = document.getElementById("appLogoTitle");
+              if (logoTitle) logoTitle.innerText = config.app_name;
+            }
+            if (config.maintenance_mode && (!currentUserSession || !currentUserSession.isMaster)) {
+              showMaintenanceScreen();
+            } else {
+              const ms = document.getElementById("maintenanceScreen");
+              if (ms) ms.classList.add("hidden");
+            }
+            if (config.embed_url) {
+              setupEmbedUrl(config.embed_url);
             }
           }
+        }, (err) => {
+          console.warn("Settings sync error:", err);
         });
-
-        if (list.length > 0) {
-          container.innerHTML = "";
-          list.forEach(item => {
-            const nDiv = document.createElement("div");
-            nDiv.className = "p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-200 text-xs flex items-center gap-3";
-            nDiv.innerHTML = `
-              <i class="fas fa-bullhorn text-amber-400 text-base"></i>
-              <span class="flex-1">${item.message || ""}</span>
-            `;
-            container.appendChild(nDiv);
-          });
-          container.classList.remove("hidden");
-        } else {
-          container.classList.add("hidden");
-        }
       } catch (err) {
-        console.warn("Notices load error:", err);
-        container.classList.add("hidden");
+        console.warn("Setup settings listener error:", err);
       }
     }
 
     async function loadSettings() {
-      try {
-        const docRef = doc(db, "settings", "config");
-        const snap = await getDoc(docRef);
-        if (snap.exists()) {
-          const config = snap.data();
-          if (config.app_name) {
-            document.title = config.app_name;
-          }
-          if (config.maintenance_mode && (!currentUserSession || !currentUserSession.isMaster)) {
-            showMaintenanceScreen();
-          }
-          if (config.embed_url) {
-            setupEmbedUrl(config.embed_url);
-          }
-        }
-      } catch (err) {
-        console.warn("Settings fetch error:", err);
-      }
+      setupSettingsListener();
     }
 
     function showMaintenanceScreen() {
