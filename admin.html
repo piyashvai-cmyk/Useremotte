@@ -878,11 +878,26 @@
                     </div>
                 </div>
 
-                <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
-                        Description (Optional)
-                    </label>
-                    <input type="text" id="botDescInput" placeholder="e.g. Ultra fast dedicated cluster node" class="glass-input w-full px-4 py-2.5 rounded-xl text-xs">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
+                            UID Boxes Count
+                        </label>
+                        <select id="botUidBoxesSelect" class="glass-input w-full px-4 py-2.5 rounded-xl text-xs font-semibold">
+                            <option value="1">1 UID Box</option>
+                            <option value="2">2 UID Boxes</option>
+                            <option value="3">3 UID Boxes</option>
+                            <option value="4">4 UID Boxes</option>
+                            <option value="5">5 UID Boxes</option>
+                            <option value="6" selected>6 UID Boxes (Default)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
+                            Description (Optional)
+                        </label>
+                        <input type="text" id="botDescInput" placeholder="e.g. Dedicated node" class="glass-input w-full px-4 py-2.5 rounded-xl text-xs">
+                    </div>
                 </div>
 
                 <div class="pt-3 flex gap-3">
@@ -1260,7 +1275,7 @@
                 } else {
                     d = new Date(timestamp);
                 }
-                return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             } catch (e) {
                 return 'Invalid Date';
             }
@@ -1933,6 +1948,10 @@
                                     <span class="text-gray-400">Region:</span>
                                     <span class="font-bold text-orange-400">${escapeHtml(region)}</span>
                                 </div>
+                                <div class="flex justify-between py-1 border-b border-gray-800">
+                                    <span class="text-gray-400">UID Boxes:</span>
+                                    <span class="font-bold text-amber-400">${b.uid_boxes || 6} UID Boxes</span>
+                                </div>
                                 <div class="py-1 border-b border-gray-800">
                                     <span class="text-gray-400 block mb-1">API Endpoint:</span>
                                     <span class="font-mono text-[11px] text-gray-300 break-all bg-dark-950 p-2 rounded block border border-gray-800">
@@ -2031,7 +2050,7 @@
 
                 return `
                     <div class="glass-card p-5 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                        <div class="flex items-start gap-3.5">
+                        <div class="flex items-start gap-3.5 flex-1">
                             <div class="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0">
                                 <i class="fas fa-bullhorn"></i>
                             </div>
@@ -2044,6 +2063,11 @@
                                 </div>
                                 <p class="text-xs text-gray-200 font-medium whitespace-pre-line">${escapeHtml(n.message)}</p>
                             </div>
+                        </div>
+                        <div class="shrink-0">
+                            <button onclick="deleteNoticeAction('${escapeHtml(n.id || '')}')" class="px-3.5 py-1.5 rounded-lg bg-red-950/50 hover:bg-red-600 text-red-400 hover:text-white border border-red-800/40 text-xs font-bold transition-all flex items-center gap-1.5">
+                                <i class="fas fa-trash-alt"></i> Delete
+                            </button>
                         </div>
                     </div>
                 `;
@@ -2132,6 +2156,7 @@
             document.getElementById('botUrlInput').value = '';
             document.getElementById('botRegionSelect').value = 'ALL';
             document.getElementById('botActiveSelect').value = 'true';
+            document.getElementById('botUidBoxesSelect').value = '6';
             document.getElementById('botDescInput').value = '';
             document.getElementById('botBtnText').textContent = 'Save Bot';
             openModal('addBotModal');
@@ -2146,9 +2171,42 @@
             document.getElementById('botUrlInput').value = bot.api_url || '';
             document.getElementById('botRegionSelect').value = bot.region || 'ALL';
             document.getElementById('botActiveSelect').value = bot.active !== false ? 'true' : 'false';
+            document.getElementById('botUidBoxesSelect').value = String(bot.uid_boxes || 6);
             document.getElementById('botDescInput').value = bot.description || '';
             document.getElementById('botBtnText').textContent = 'Update Bot';
             openModal('addBotModal');
+        };
+
+        window.deleteNoticeAction = async function(noticeId) {
+            if (!noticeId) return;
+            if (!confirm("Are you sure you want to delete this notice broadcast?")) return;
+
+            showToast("Deleting notice...", "info");
+            let success = false;
+            try {
+                const res = await apiRequest('/api/admin/delete-notice', 'POST', { notice_id: noticeId });
+                if (res && res.success) {
+                    success = true;
+                }
+            } catch (err) {
+                console.warn("API delete-notice fallback to client Firestore SDK:", err);
+            }
+
+            if (!success && db) {
+                try {
+                    await deleteDoc(doc(db, "notices", noticeId));
+                    success = true;
+                } catch (fErr) {
+                    console.error("Client Firestore SDK delete notice error:", fErr);
+                }
+            }
+
+            if (success) {
+                showToast("Notice deleted successfully.", "success");
+                await loadNotices();
+            } else {
+                showToast("Failed to delete notice.", "error");
+            }
         };
 
         window.deleteBotAction = async function(botId) {
@@ -2313,6 +2371,14 @@
                 const validity_days = parseInt(document.getElementById('genValidity').value) || 7;
                 const device_limit = parseInt(document.getElementById('genDeviceLimit').value) || 2;
 
+                if (custom_key) {
+                    const alreadyExists = window.adminState.keys.some(k => (k.key || k.id) === custom_key);
+                    if (alreadyExists) {
+                        showToast(`Key "${custom_key}" already exists! Duplicate keys are not allowed.`, 'error');
+                        return;
+                    }
+                }
+
                 const btn = document.getElementById('genSubmitBtn');
                 const btnText = document.getElementById('genBtnText');
                 const spinner = document.getElementById('genSpinner');
@@ -2322,15 +2388,26 @@
                 spinner.classList.remove('hidden');
 
                 let keyResult = null;
+                let apiErrorMsg = null;
                 try {
                     const res = await apiRequest('/api/admin/generate-key', 'POST', {
                         username, custom_key, validity_days, device_limit
                     });
                     if (res && res.success) {
                         keyResult = res.key;
+                    } else if (res && (res.error || res.message)) {
+                        apiErrorMsg = res.error || res.message;
                     }
                 } catch (err) {
                     console.warn("API generate-key fallback to client Firestore SDK:", err);
+                }
+
+                if (apiErrorMsg) {
+                    btn.disabled = false;
+                    btnText.textContent = 'Create Key';
+                    spinner.classList.add('hidden');
+                    showToast(apiErrorMsg, 'error');
+                    return;
                 }
 
                 if (!keyResult && db) {
@@ -2432,6 +2509,7 @@
                 const api_url = document.getElementById('botUrlInput').value.trim();
                 const region = document.getElementById('botRegionSelect').value;
                 const active = document.getElementById('botActiveSelect').value === 'true';
+                const uid_boxes = parseInt(document.getElementById('botUidBoxesSelect').value, 10) || 6;
                 const description = document.getElementById('botDescInput').value.trim();
 
                 const btn = document.getElementById('botSubmitBtn');
@@ -2446,7 +2524,7 @@
                 if (editBotId) {
                     try {
                         const res = await apiRequest('/api/admin/update-bot', 'POST', {
-                            bot_id: editBotId, name, api_url, region, active, description
+                            bot_id: editBotId, name, api_url, region, active, description, uid_boxes
                         });
                         if (res && res.success) success = true;
                     } catch (err) {
@@ -2455,7 +2533,7 @@
                     if (!success && db) {
                         try {
                             await updateDoc(doc(db, "bots", editBotId), {
-                                name, api_url, region, active, description, updated_at: Date.now()
+                                name, api_url, region, active, description, uid_boxes, updated_at: Date.now()
                             });
                             success = true;
                         } catch (fErr) {
@@ -2465,7 +2543,7 @@
                 } else {
                     try {
                         const res = await apiRequest('/api/admin/add-bot', 'POST', {
-                            name, api_url, region, active, description
+                            name, api_url, region, active, description, uid_boxes
                         });
                         if (res && res.success) success = true;
                     } catch (err) {
@@ -2475,7 +2553,7 @@
                         try {
                             const botId = name.replace(/\s+/g, '_').toUpperCase();
                             const botDoc = {
-                                name, api_url, region, active, description, created_at: Date.now()
+                                name, api_url, region, active, description, uid_boxes, created_at: Date.now()
                             };
                             await setDoc(doc(db, "bots", botId), botDoc);
                             success = true;

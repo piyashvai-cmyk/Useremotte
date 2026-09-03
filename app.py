@@ -525,6 +525,26 @@ def generate_key():
 
         key_value = custom_key if custom_key else f"MPX-{generate_random_key(8)}"
 
+        db = get_db()
+        if custom_key:
+            # Check for duplicate key (case-sensitive exact check)
+            if db is not None:
+                existing_doc = db.collection("keys").document(key_value).get()
+                if existing_doc.exists:
+                    return jsonify({
+                        "success": False,
+                        "error": f"Key '{key_value}' already exists! You cannot create duplicate keys.",
+                        "message": f"Key '{key_value}' already exists! You cannot create duplicate keys."
+                    }), 400
+            else:
+                existing_doc = rest_get_doc("keys", key_value)
+                if existing_doc is not None:
+                    return jsonify({
+                        "success": False,
+                        "error": f"Key '{key_value}' already exists! You cannot create duplicate keys.",
+                        "message": f"Key '{key_value}' already exists! You cannot create duplicate keys."
+                    }), 400
+
         key_doc = {
             "key": key_value,
             "username": username if username else "Unassigned",
@@ -679,6 +699,8 @@ def add_bot():
         region = data.get("region", "ALL").strip()
         description = data.get("description", "").strip()
         active = bool(data.get("active", True))
+        uid_boxes = int(data.get("uid_boxes", 6))
+        uid_boxes = max(1, min(6, uid_boxes))
 
         if not name or not api_url:
             return jsonify({"success": False, "error": "Bot name and API URL are required", "message": "Bot name and API URL are required"}), 400
@@ -690,6 +712,7 @@ def add_bot():
             "region": region,
             "description": description,
             "active": active,
+            "uid_boxes": uid_boxes,
             "created_at": get_timestamp()
         }
 
@@ -858,6 +881,8 @@ def update_bot():
         region = data.get("region", "ALL").strip()
         description = data.get("description", "").strip()
         active = bool(data.get("active", True))
+        uid_boxes = int(data.get("uid_boxes", 6))
+        uid_boxes = max(1, min(6, uid_boxes))
 
         if not name or not api_url:
             return jsonify({"success": False, "error": "Bot name and API URL are required", "message": "Bot name and API URL are required"}), 400
@@ -869,6 +894,7 @@ def update_bot():
             "region": region,
             "description": description,
             "active": active,
+            "uid_boxes": uid_boxes,
             "updated_at": get_timestamp()
         }
 
@@ -1080,6 +1106,26 @@ def send_notice():
         return jsonify({"success": True, "message": "Notice broadcasted successfully", "notice_id": notice_id}), 200
     except Exception as e:
         print("Send Notice Error:", str(e))
+        return jsonify({"success": False, "error": str(e), "message": str(e)}), 500
+
+@app.route("/api/admin/delete-notice", methods=["POST"])
+@require_admin_auth
+def delete_notice():
+    try:
+        data = request.get_json(silent=True) or {}
+        notice_id = data.get("notice_id", "").strip()
+        if not notice_id:
+            return jsonify({"success": False, "error": "notice_id is required", "message": "notice_id is required"}), 400
+
+        db = get_db()
+        if db is not None:
+            db.collection("notices").document(notice_id).delete()
+        else:
+            rest_delete_doc("notices", notice_id)
+
+        return jsonify({"success": True, "message": f"Notice {notice_id} deleted successfully"}), 200
+    except Exception as e:
+        print("Delete Notice Error:", str(e))
         return jsonify({"success": False, "error": str(e), "message": str(e)}), 500
 
 @app.route("/api/admin/update-settings", methods=["POST"])
