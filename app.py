@@ -39,8 +39,8 @@ SPECIAL_TARGET_CODE = os.environ.get("SPECIAL_TARGET_CODE", "3859281")
 DEFAULT_EMOTE_ID = os.environ.get("DEFAULT_EMOTE_ID", "909000063")
 UID_COUNT = int(os.environ.get("UID_COUNT", "6"))
 
-FIREBASE_PROJECT_ID = os.environ.get("FIREBASE_PROJECT_ID", "emote-4756e")
-FIREBASE_API_KEY = os.environ.get("FIREBASE_API_KEY", "AIzaSyDPzPn7SXDQcF2UpSAB2fGpRJCe1VDQd7k")
+FIREBASE_PROJECT_ID = os.environ.get("FIREBASE_PROJECT_ID", "mpxpanel")
+FIREBASE_API_KEY = os.environ.get("FIREBASE_API_KEY", "AIzaSyAkAqyxA9sPjd7Dlr82LmWBYKO0WHi5KLI")
 FIREBASE_CLIENT_EMAIL = os.environ.get("FIREBASE_CLIENT_EMAIL", "")
 FIREBASE_PRIVATE_KEY = os.environ.get("FIREBASE_PRIVATE_KEY", "")
 FIREBASE_SERVICE_ACCOUNT_KEY = os.environ.get("FIREBASE_SERVICE_ACCOUNT_KEY", "")
@@ -113,24 +113,52 @@ def rest_set_doc(collection, doc_id, data):
     params = {"key": FIREBASE_API_KEY} if FIREBASE_API_KEY else {}
     payload = {"fields": dict_to_firestore_fields(data)}
     resp = requests.patch(url, params=params, json=payload, timeout=8)
-    return resp.status_code in [200, 201]
+    if resp.status_code not in [200, 201]:
+        err_msg = ""
+        try:
+            err_msg = resp.json().get("error", {}).get("message", resp.text)
+        except Exception:
+            err_msg = resp.text
+        print(f"Firestore REST PATCH Error ({resp.status_code}): {err_msg}")
+        if resp.status_code == 403:
+            raise Exception("Firebase Permission Denied (403). Please update your Firebase Console Security Rules to: allow read, write: if true;")
+        raise Exception(f"Firebase Error ({resp.status_code}): {err_msg}")
+    return True
 
 def rest_add_doc(collection, data):
     url = f"{FIRESTORE_REST_BASE}/{collection}"
     params = {"key": FIREBASE_API_KEY} if FIREBASE_API_KEY else {}
     payload = {"fields": dict_to_firestore_fields(data)}
     resp = requests.post(url, params=params, json=payload, timeout=8)
-    if resp.status_code in [200, 201]:
-        res_json = resp.json()
-        doc_name = res_json.get("name", "")
-        return doc_name.split("/")[-1] if "/" in doc_name else "doc"
-    return None
+    if resp.status_code not in [200, 201]:
+        err_msg = ""
+        try:
+            err_msg = resp.json().get("error", {}).get("message", resp.text)
+        except Exception:
+            err_msg = resp.text
+        print(f"Firestore REST POST Error ({resp.status_code}): {err_msg}")
+        if resp.status_code == 403:
+            raise Exception("Firebase Permission Denied (403). Please update your Firebase Console Security Rules to: allow read, write: if true;")
+        raise Exception(f"Firebase Error ({resp.status_code}): {err_msg}")
+    res_json = resp.json()
+    doc_name = res_json.get("name", "")
+    return doc_name.split("/")[-1] if "/" in doc_name else "doc"
 
 def rest_delete_doc(collection, doc_id):
     url = f"{FIRESTORE_REST_BASE}/{collection}/{doc_id}"
     params = {"key": FIREBASE_API_KEY} if FIREBASE_API_KEY else {}
     resp = requests.delete(url, params=params, timeout=8)
-    return resp.status_code in [200, 204]
+    if resp.status_code not in [200, 204]:
+        err_msg = ""
+        try:
+            err_msg = resp.json().get("error", {}).get("message", resp.text)
+        except Exception:
+            err_msg = resp.text
+        print(f"Firestore REST DELETE Error ({resp.status_code}): {err_msg}")
+        if resp.status_code == 403:
+            raise Exception("Firebase Permission Denied (403). Please update your Firebase Console Security Rules to: allow read, write: if true;")
+        raise Exception(f"Firebase Error ({resp.status_code}): {err_msg}")
+    return True
 
 # -----------------------------------------------------------------------------
 # FIREBASE ADMIN SDK INITIALIZATION (SERVER-SIDE)

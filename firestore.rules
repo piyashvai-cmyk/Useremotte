@@ -2,39 +2,9 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // =========================================================================
-    // MPX PANEL - UNIFIED FIRESTORE SECURITY RULES
-    // =========================================================================
-
-    // 1. Keys collection (License keys & Device authentication)
-    match /keys/{keyId} {
-      allow read, write: if true;
-    }
-
-    // 2. Bots collection (Bot APIs & Endpoints)
-    match /bots/{botId} {
-      allow read, write: if true;
-    }
-
-    // 3. Emotes collection (Catalog & Assets)
-    match /emotes/{emoteId} {
-      allow read, write: if true;
-    }
-
-    // 4. Notices collection (Broadcast announcements)
-    match /notices/{noticeId} {
-      allow read, write: if true;
-    }
-
-    // 5. Settings collection (Global configuration)
-    match /settings/{settingDoc} {
-      allow read, write: if true;
-    }
-
-    // Default fallback
+    // Allow read and write access to all collections for MPX Panel
     match /{document=**} {
-      allow read, write: if false;
+      allow read, write: if true;
     }
   }
 }
