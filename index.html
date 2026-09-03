@@ -1283,25 +1283,31 @@
         if (existing) savedValues[id] = existing.value;
       });
 
-      container.innerHTML = "";
+      container.innerHTML = `
+        <div class="p-2.5 rounded-xl bg-white/5 border border-white/10 mb-2">
+          <p class="text-[11px] text-gray-300 font-medium">
+            <i class="fas fa-info-circle text-[var(--primary)] mr-1"></i>
+            Enter UID in any box (Box 1 to 6). At least one UID is required.
+          </p>
+        </div>
+      `;
 
       uidFields.forEach((id, index) => {
         const num = id.replace("uid", "").toUpperCase();
-        const isRequired = id === "uid1";
         const val = savedValues[id] || "";
 
         const wrapper = document.createElement("div");
         wrapper.className = "space-y-1";
         wrapper.innerHTML = `
           <label for="${id}" class="block text-xs font-semibold text-gray-300 mb-1">
-            UID ${num} ${isRequired ? '<span class="text-red-400">*</span>' : '<span class="text-gray-500 text-[10px] font-normal">(Optional)</span>'}
+            UID ${num} <span class="text-gray-500 text-[10px] font-normal">(Box ${num})</span>
           </label>
           <div class="input-wrapper">
             <input
               type="text"
               id="${id}"
               class="input-field"
-              placeholder="Enter UID ${num}${isRequired ? '' : ' (Optional)'}"
+              placeholder="Enter UID in Box ${num}"
               value="${val}"
             >
             <div class="input-actions">
@@ -1344,7 +1350,7 @@
 
       if (!currentUserSession.isMaster && currentKeyData) {
         if (!currentKeyData.active) {
-          window.showToast("Your key is inactive.", "error");
+          window.showToast("Your key is inactive or banned.", "error");
           logout();
           return;
         }
@@ -1357,10 +1363,7 @@
 
       // Input validation
       const teamCodeInput = document.getElementById("teamCode");
-      const uid1Input = document.getElementById("uid1");
-
       const teamCode = teamCodeInput ? teamCodeInput.value.trim() : "";
-      const uid1 = uid1Input ? uid1Input.value.trim() : "";
 
       if (!teamCode) {
         window.showToast("Please enter Team Code.", "warning");
@@ -1369,10 +1372,30 @@
         return;
       }
 
-      if (!uid1) {
-        window.showToast("UID 1 is required.", "warning");
+      // Collect UIDs from any box
+      const uidPayload = {};
+      let hasAnyUid = false;
+      uidFields.forEach(fieldId => {
+        const input = document.getElementById(fieldId);
+        const val = input ? input.value.trim() : "";
+        uidPayload[fieldId] = val;
+        if (val) hasAnyUid = true;
+      });
+
+      if (!hasAnyUid) {
+        window.showToast("Please enter UID in at least one box.", "warning");
         window.playWarningSound();
-        if (uid1Input) uid1Input.focus();
+        const firstInput = document.getElementById("uid1");
+        if (firstInput) firstInput.focus();
+        return;
+      }
+
+      // Check Region and BOT
+      const regionSelect = document.getElementById("regionSelect");
+      const currentRegion = regionSelect ? regionSelect.value : "";
+      if (!selectedBot || !selectedBot.id) {
+        window.showToast(`No BOT API available for region ${currentRegion}. Please select another region or add BOT in Admin Panel.`, "error");
+        window.playErrorSound();
         return;
       }
 
@@ -1382,18 +1405,11 @@
       const payload = {
         team_code: teamCode,
         emote_id: emoteToSend,
-        uid1: uid1,
-        bot_id: selectedBot ? selectedBot.id : "",
-        bot_url: selectedBot ? (selectedBot.api_url || selectedBot.url || "") : ""
+        ...uidPayload,
+        bot_id: selectedBot.id,
+        bot_url: selectedBot.api_url || selectedBot.url || "",
+        region: currentRegion
       };
-
-      // Add all optional UIDs
-      for (let i = 2; i <= 99; i++) {
-        const field = document.getElementById(`uid${i}`);
-        if (field) {
-          payload[`uid${i}`] = field.value.trim();
-        }
-      }
 
       // Lock UI state
       isSending = true;
@@ -1411,7 +1427,7 @@
         const data = await response.json();
 
         if (response.ok && data.success === true) {
-          window.showToast("Emote sent successfully!", "success");
+          window.showToast(`Emote sent successfully via ${selectedBot.name || 'BOT'}!`, "success");
           window.playSuccessSound();
         } else {
           const errorMsg = data.error || data.message || "Emote send failed.";
@@ -1627,10 +1643,54 @@
       setupEmotesListener();
     }
 
-    function setupBotsListener() {
-      const select = document.getElementById("botSelect");
-      if (!select) return;
+    let allConfiguredBots = [];
 
+    function updateBotsDropdownForRegion() {
+      const regionSelect = document.getElementById("regionSelect");
+      const botSelect = document.getElementById("botSelect");
+      if (!botSelect) return;
+
+      const currentRegion = (regionSelect ? regionSelect.value : "BD") || "BD";
+      const normalizedRegion = currentRegion.trim().toUpperCase();
+
+      // Filter active bots assigned specifically to this region (or ALL if bot handles ALL regions)
+      const matchingBots = allConfiguredBots.filter(bot => {
+        const bReg = (bot.region || "ALL").trim().toUpperCase();
+        return bReg === normalizedRegion || bReg === "ALL";
+      });
+
+      botSelect.innerHTML = "";
+
+      if (matchingBots.length === 0) {
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.innerText = `No BOT Available for ${currentRegion}`;
+        botSelect.appendChild(opt);
+        botSelect.disabled = true;
+        selectedBot = null;
+      } else {
+        botSelect.disabled = false;
+        matchingBots.forEach((bot, index) => {
+          const opt = document.createElement("option");
+          opt.value = bot.id;
+          const displayName = bot.name
+            ? (bot.name.toUpperCase().startsWith("BOT") ? bot.name : `BOT ${index + 1} (${bot.name})`)
+            : `BOT ${index + 1}`;
+          opt.innerText = displayName;
+          botSelect.appendChild(opt);
+        });
+
+        // Restore previously selected bot if valid for this region, otherwise select first
+        if (selectedBot && matchingBots.some(b => b.id === selectedBot.id)) {
+          botSelect.value = selectedBot.id;
+        } else {
+          selectedBot = matchingBots[0];
+          botSelect.value = selectedBot.id;
+        }
+      }
+    }
+
+    function setupBotsListener() {
       try {
         const botsRef = collection(db, "bots");
         const q = query(botsRef, where("active", "==", true));
@@ -1641,28 +1701,21 @@
             bots.push({ id: docSnap.id, ...data });
           });
 
-          activeBots = bots.length > 0 ? bots : [{ id: "BOT-1", name: "BOT-1 (Primary)", active: true }];
-
-          const prevVal = select.value;
-          select.innerHTML = "";
-          activeBots.forEach((bot, index) => {
-            const opt = document.createElement("option");
-            opt.value = bot.id;
-            opt.innerText = bot.name || `BOT-${index + 1}`;
-            select.appendChild(opt);
-          });
-
-          if (prevVal && activeBots.some(b => b.id === prevVal)) {
-            select.value = prevVal;
-            selectedBot = activeBots.find(b => b.id === prevVal);
-          } else {
-            selectedBot = activeBots[0];
-          }
+          allConfiguredBots = bots;
+          activeBots = bots;
+          updateBotsDropdownForRegion();
         }, (err) => {
           console.warn("Bots real-time sync error:", err);
-          activeBots = [{ id: "BOT-1", name: "BOT-1 (Primary)", active: true }];
-          select.innerHTML = `<option value="BOT-1">BOT-1 (Primary)</option>`;
-          selectedBot = activeBots[0];
+          fetch("/api/bots")
+            .then(r => r.json())
+            .then(data => {
+              if (data && data.bots) {
+                allConfiguredBots = data.bots.filter(b => b.active !== false);
+                activeBots = allConfiguredBots;
+                updateBotsDropdownForRegion();
+              }
+            })
+            .catch(e => console.warn("Fetch fallback bots error:", e));
         });
       } catch (err) {
         console.warn("Setup bots listener error:", err);
@@ -1673,16 +1726,90 @@
       setupBotsListener();
     }
 
+    function setupRegionsListener() {
+      const regionSelect = document.getElementById("regionSelect");
+      if (!regionSelect) return;
+
+      try {
+        const regionsRef = collection(db, "regions");
+        onSnapshot(regionsRef, (snap) => {
+          const regions = [];
+          snap.forEach(docSnap => {
+            regions.push(docSnap.id);
+          });
+
+          const regionList = regions.length > 0 ? regions : ["BD", "IND", "Sylhet", "PK", "BR", "US", "Other"];
+          const prevVal = regionSelect.value;
+          regionSelect.innerHTML = "";
+          regionList.forEach(r => {
+            const opt = document.createElement("option");
+            opt.value = r;
+            opt.innerText = r;
+            regionSelect.appendChild(opt);
+          });
+
+          if (prevVal && regionList.includes(prevVal)) {
+            regionSelect.value = prevVal;
+          } else if (regionList.includes("BD")) {
+            regionSelect.value = "BD";
+          }
+          updateBotsDropdownForRegion();
+        }, (err) => {
+          console.warn("Regions sync error:", err);
+        });
+      } catch (err) {
+        console.warn("Setup regions listener error:", err);
+      }
+    }
+
+    function setupCategoriesListener() {
+      const catGroup = document.getElementById("categoryPillGroup");
+      if (!catGroup) return;
+
+      try {
+        const catsRef = collection(db, "categories");
+        onSnapshot(catsRef, (snap) => {
+          const cats = ["ALL"];
+          snap.forEach(docSnap => {
+            const name = (docSnap.id || docSnap.data().name || "").toUpperCase();
+            if (name && name !== "ALL" && !cats.includes(name)) {
+              cats.push(name);
+            }
+          });
+
+          if (cats.length === 1) {
+            cats.push("EVO", "OLD", "RARE", "POPULAR", "SPECIAL");
+          }
+
+          catGroup.innerHTML = "";
+          cats.forEach(c => {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = `cat-pill ${c === selectedCategory ? 'active' : ''}`;
+            btn.id = `cat-${c}`;
+            btn.innerText = c;
+            btn.onclick = () => window.setCategory(c);
+            catGroup.appendChild(btn);
+          });
+        }, (err) => {
+          console.warn("Categories sync error:", err);
+        });
+      } catch (err) {
+        console.warn("Setup categories listener error:", err);
+      }
+    }
+
     window.handleBotChange = function() {
       const select = document.getElementById("botSelect");
       if (!select) return;
       const botId = select.value;
-      selectedBot = activeBots.find(b => b.id === botId) || activeBots[0];
+      selectedBot = allConfiguredBots.find(b => b.id === botId) || null;
       window.playClickSound();
     };
 
     window.handleRegionChange = function() {
       window.playClickSound();
+      updateBotsDropdownForRegion();
     };
 
     function setupNoticesListener() {
@@ -2194,8 +2321,10 @@
       // 4. Load Safe Config & Dynamic UID fields
       await loadConfig();
 
-      // 5. Load Settings, Bots & Emotes
+      // 5. Load Settings, Bots, Regions, Categories & Emotes
       await loadSettings();
+      setupRegionsListener();
+      setupCategoriesListener();
       await loadBots();
       await loadEmotes();
 

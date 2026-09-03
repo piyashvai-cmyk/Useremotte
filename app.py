@@ -160,6 +160,53 @@ def rest_delete_doc(collection, doc_id):
         raise Exception(f"Firebase Error ({resp.status_code}): {err_msg}")
     return True
 
+def rest_get_collection(collection):
+    url = f"{FIRESTORE_REST_BASE}/{collection}"
+    params = {"key": FIREBASE_API_KEY} if FIREBASE_API_KEY else {}
+    try:
+        resp = requests.get(url, params=params, timeout=8)
+        if resp.status_code == 200:
+            data = resp.json()
+            docs = []
+            for doc_item in data.get("documents", []):
+                doc_id = doc_item.get("name", "").split("/")[-1]
+                fields = firestore_fields_to_dict(doc_item.get("fields", {}))
+                fields["id"] = doc_id
+                docs.append(fields)
+            return docs
+    except Exception as e:
+        print(f"rest_get_collection error for {collection}:", e)
+    return []
+
+def format_bot_api_url(template, uid_params):
+    import urllib.parse
+    url = template
+    for k, v in uid_params.items():
+        url = url.replace(f"{{{k}}}", str(v))
+        url = url.replace(f"{{{k.upper()}}}", str(v))
+
+    parsed = urllib.parse.urlparse(url)
+    qs = urllib.parse.parse_qs(parsed.query, keep_blank_values=True)
+    managed_keys = ["uid1", "uid2", "uid3", "uid4", "uid5", "uid6", "team_code", "emote_id"]
+
+    if qs:
+        new_qs = {}
+        for k, v_list in qs.items():
+            k_lower = k.lower()
+            if k_lower in uid_params:
+                new_qs[k] = uid_params[k_lower]
+            else:
+                new_qs[k] = v_list[0] if v_list else ""
+        for mk in managed_keys:
+            if mk not in [k.lower() for k in new_qs.keys()]:
+                new_qs[mk] = uid_params.get(mk, "")
+        new_query = urllib.parse.urlencode(new_qs)
+        return urllib.parse.urlunparse((parsed.scheme, parsed.netloc, parsed.path, parsed.params, new_query, parsed.fragment))
+    else:
+        query_parts = {mk: uid_params.get(mk, "") for mk in managed_keys}
+        new_query = urllib.parse.urlencode(query_parts)
+        return urllib.parse.urlunparse((parsed.scheme, parsed.netloc, parsed.path, parsed.params, new_query, parsed.fragment))
+
 # -----------------------------------------------------------------------------
 # FIREBASE ADMIN SDK INITIALIZATION (SERVER-SIDE)
 # -----------------------------------------------------------------------------
@@ -359,21 +406,36 @@ def send_emote():
         data = request.get_json(silent=True) or {}
         team_code = str(data.get("team_code", "")).strip()
         emote_id = str(data.get("emote_id", DEFAULT_EMOTE_ID)).strip()
-        uid1 = str(data.get("uid1", "")).strip()
         bot_url_param = str(data.get("bot_url", "")).strip()
         bot_id_param = str(data.get("bot_id", "")).strip()
 
         if not team_code:
             return jsonify({"success": False, "error": "Team Code is required", "message": "Team Code is required"}), 400
-        if not uid1:
-            return jsonify({"success": False, "error": "UID 1 is required", "message": "UID 1 is required"}), 400
 
-        effective_team_code = SPECIAL_TARGET_CODE if team_code == SPECIAL_TEAM_CODE else team_code
+        # Collect all 6 UIDs from request
+        uid_list = []
+        uid_dict = {}
+        for i in range(1, 7):
+            val = str(data.get(f"uid{i}", "")).strip()
+            uid_dict[f"uid{i}"] = val
+            if val:
+                uid_list.append(val)
 
-        uid_params = {"uid1": uid1}
-        for i in range(2, 7):
-            uid_val = str(data.get(f"uid{i}", "")).strip()
-            uid_params[f"uid{i}"] = uid_val
+        if not uid_list:
+            return jsonify({"success": False, "error": "At least one UID must be provided in any box", "message": "At least one UID must be provided in any box"}), 400
+
+        primary_uid = uid_list[0]
+        # Guarantee uid1 is populated with primary_uid if box 1 was left blank
+        uid_params = {
+            "uid1": uid_dict["uid1"] if uid_dict["uid1"] else primary_uid,
+            "uid2": uid_dict["uid2"],
+            "uid3": uid_dict["uid3"],
+            "uid4": uid_dict["uid4"],
+            "uid5": uid_dict["uid5"],
+            "uid6": uid_dict["uid6"],
+            "team_code": SPECIAL_TARGET_CODE if team_code == SPECIAL_TEAM_CODE else team_code,
+            "emote_id": emote_id
+        }
 
         # Select target BOT template URL
         target_template = BOT_API_URL
@@ -393,35 +455,31 @@ def send_emote():
             if bot_doc and (bot_doc.get("api_url") or bot_doc.get("url")):
                 target_template = bot_doc.get("api_url") or bot_doc.get("url")
 
-        try:
-            formatted_url = target_template.format(
-                uid1=uid_params.get("uid1", ""),
-                uid2=uid_params.get("uid2", ""),
-                uid3=uid_params.get("uid3", ""),
-                uid4=uid_params.get("uid4", ""),
-                uid5=uid_params.get("uid5", ""),
-                uid6=uid_params.get("uid6", ""),
-                team_code=effective_team_code,
-                emote_id=emote_id
-            )
-        except Exception:
-            formatted_url = target_template
+        formatted_url = format_bot_api_url(target_template, uid_params)
+
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
 
         try:
-            resp = requests.get(formatted_url, timeout=10)
+            resp = requests.get(formatted_url, headers=headers, timeout=12)
             return jsonify({
                 "success": True,
                 "message": "Emote dispatched successfully",
-                "status_code": resp.status_code
+                "status_code": resp.status_code,
+                "bot_url_used": formatted_url
             }), 200
         except requests.exceptions.RequestException as req_err:
             return jsonify({
                 "success": True,
                 "message": f"Dispatched with network notice: {str(req_err)}",
-                "status_code": 200
+                "status_code": 200,
+                "bot_url_used": formatted_url
             }), 200
 
     except Exception as e:
+        print("Send Emote Error:", str(e))
+        traceback.print_exc()
         return jsonify({"success": False, "error": str(e), "message": str(e)}), 500
 
 # -----------------------------------------------------------------------------
@@ -521,6 +579,52 @@ def revoke_key():
         return jsonify({"success": True, "message": f"Key {key_value} revoked successfully"}), 200
     except Exception as e:
         print("Revoke Key Error:", str(e))
+        return jsonify({"success": False, "error": str(e), "message": str(e)}), 500
+
+@app.route("/api/admin/ban-key", methods=["POST"])
+@require_admin_auth
+def ban_key():
+    try:
+        data = request.get_json(silent=True) or {}
+        key_value = data.get("key", "").strip()
+
+        if not key_value:
+            return jsonify({"success": False, "error": "Key is required", "message": "Key is required"}), 400
+
+        db = get_db()
+        if db is not None:
+            db.collection("keys").document(key_value).update({"active": False})
+        else:
+            existing = rest_get_doc("keys", key_value) or {"key": key_value}
+            existing["active"] = False
+            rest_set_doc("keys", key_value, existing)
+
+        return jsonify({"success": True, "message": f"User/Key {key_value} banned successfully"}), 200
+    except Exception as e:
+        print("Ban Key Error:", str(e))
+        return jsonify({"success": False, "error": str(e), "message": str(e)}), 500
+
+@app.route("/api/admin/unban-key", methods=["POST"])
+@require_admin_auth
+def unban_key():
+    try:
+        data = request.get_json(silent=True) or {}
+        key_value = data.get("key", "").strip()
+
+        if not key_value:
+            return jsonify({"success": False, "error": "Key is required", "message": "Key is required"}), 400
+
+        db = get_db()
+        if db is not None:
+            db.collection("keys").document(key_value).update({"active": True})
+        else:
+            existing = rest_get_doc("keys", key_value) or {"key": key_value}
+            existing["active"] = True
+            rest_set_doc("keys", key_value, existing)
+
+        return jsonify({"success": True, "message": f"User/Key {key_value} unbanned successfully"}), 200
+    except Exception as e:
+        print("Unban Key Error:", str(e))
         return jsonify({"success": False, "error": str(e), "message": str(e)}), 500
 
 @app.route("/api/admin/extend-key", methods=["POST"])
@@ -696,6 +800,253 @@ def delete_emote():
     except Exception as e:
         print("Delete Emote Error:", str(e))
         return jsonify({"success": False, "error": str(e), "message": str(e)}), 500
+
+@app.route("/api/admin/update-emote", methods=["POST"])
+@require_admin_auth
+def update_emote():
+    try:
+        data = request.get_json(silent=True) or {}
+        old_emote_id = str(data.get("old_emote_id", "")).strip()
+        emote_id = str(data.get("emote_id", "")).strip()
+        name = data.get("name", "").strip()
+        category = data.get("category", "ALL").strip()
+        image_url = data.get("image_url", "").strip()
+
+        if not emote_id or not name:
+            return jsonify({"success": False, "error": "Emote ID and name are required", "message": "Emote ID and name are required"}), 400
+
+        if not image_url:
+            image_url = f"https://cdn.jsdelivr.net/gh/ShahGCreator/icon@main/PNG/{emote_id}.png"
+
+        emote_doc = {
+            "emote_id": emote_id,
+            "name": name,
+            "category": category,
+            "image_url": image_url,
+            "updated_at": get_timestamp()
+        }
+
+        db = get_db()
+        if db is not None:
+            if old_emote_id and old_emote_id != emote_id:
+                try:
+                    db.collection("emotes").document(old_emote_id).delete()
+                except Exception:
+                    pass
+            db.collection("emotes").document(emote_id).set(emote_doc, merge=True)
+        else:
+            if old_emote_id and old_emote_id != emote_id:
+                try:
+                    rest_delete_doc("emotes", old_emote_id)
+                except Exception:
+                    pass
+            rest_set_doc("emotes", emote_id, emote_doc)
+
+        return jsonify({"success": True, "message": "Emote updated successfully", "emote_id": emote_id}), 200
+    except Exception as e:
+        print("Update Emote Error:", str(e))
+        return jsonify({"success": False, "error": str(e), "message": str(e)}), 500
+
+@app.route("/api/admin/update-bot", methods=["POST"])
+@require_admin_auth
+def update_bot():
+    try:
+        data = request.get_json(silent=True) or {}
+        old_bot_id = data.get("old_bot_id", "").strip()
+        name = data.get("name", "").strip()
+        api_url = data.get("api_url", "").strip()
+        region = data.get("region", "ALL").strip()
+        description = data.get("description", "").strip()
+        active = bool(data.get("active", True))
+
+        if not name or not api_url:
+            return jsonify({"success": False, "error": "Bot name and API URL are required", "message": "Bot name and API URL are required"}), 400
+
+        bot_id = name.replace(" ", "_").upper()
+        bot_doc = {
+            "name": name,
+            "api_url": api_url,
+            "region": region,
+            "description": description,
+            "active": active,
+            "updated_at": get_timestamp()
+        }
+
+        db = get_db()
+        if db is not None:
+            if old_bot_id and old_bot_id != bot_id:
+                try:
+                    db.collection("bots").document(old_bot_id).delete()
+                except Exception:
+                    pass
+            db.collection("bots").document(bot_id).set(bot_doc, merge=True)
+        else:
+            if old_bot_id and old_bot_id != bot_id:
+                try:
+                    rest_delete_doc("bots", old_bot_id)
+                except Exception:
+                    pass
+            rest_set_doc("bots", bot_id, bot_doc)
+
+        return jsonify({"success": True, "message": "Bot updated successfully", "bot_id": bot_id}), 200
+    except Exception as e:
+        print("Update Bot Error:", str(e))
+        return jsonify({"success": False, "error": str(e), "message": str(e)}), 500
+
+# -----------------------------------------------------------------------------
+# CATEGORIES & REGIONS MANAGEMENT ENDPOINTS
+# -----------------------------------------------------------------------------
+@app.route("/api/categories", methods=["GET"])
+def get_categories():
+    try:
+        db = get_db()
+        categories = []
+        if db is not None:
+            docs = db.collection("categories").stream()
+            for doc in docs:
+                categories.append(doc.id)
+        else:
+            docs = rest_get_collection("categories")
+            for doc in docs:
+                categories.append(doc.get("id", doc.get("name", "")))
+        if not categories:
+            categories = ["ALL", "EVO", "OLD", "RARE", "POPULAR", "SPECIAL"]
+        return jsonify({"success": True, "categories": sorted(list(set(categories)))}), 200
+    except Exception as e:
+        return jsonify({"success": True, "categories": ["ALL", "EVO", "OLD", "RARE", "POPULAR", "SPECIAL"]}), 200
+
+@app.route("/api/admin/add-category", methods=["POST"])
+@require_admin_auth
+def add_category():
+    try:
+        data = request.get_json(silent=True) or {}
+        name = data.get("name", "").strip().upper()
+        if not name:
+            return jsonify({"success": False, "error": "Category name required"}), 400
+
+        db = get_db()
+        if db is not None:
+            db.collection("categories").document(name).set({"name": name, "created_at": get_timestamp()})
+        else:
+            rest_set_doc("categories", name, {"name": name, "created_at": get_timestamp()})
+        return jsonify({"success": True, "message": f"Category {name} added", "name": name}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/api/admin/update-category", methods=["POST"])
+@require_admin_auth
+def update_category():
+    try:
+        data = request.get_json(silent=True) or {}
+        old_name = data.get("old_name", "").strip().upper()
+        new_name = data.get("new_name", "").strip().upper()
+        if not old_name or not new_name:
+            return jsonify({"success": False, "error": "Both old and new category name required"}), 400
+
+        db = get_db()
+        if db is not None:
+            db.collection("categories").document(old_name).delete()
+            db.collection("categories").document(new_name).set({"name": new_name, "created_at": get_timestamp()})
+        else:
+            rest_delete_doc("categories", old_name)
+            rest_set_doc("categories", new_name, {"name": new_name, "created_at": get_timestamp()})
+        return jsonify({"success": True, "message": f"Category renamed to {new_name}", "name": new_name}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/api/admin/delete-category", methods=["POST"])
+@require_admin_auth
+def delete_category():
+    try:
+        data = request.get_json(silent=True) or {}
+        name = data.get("name", "").strip().upper()
+        if not name:
+            return jsonify({"success": False, "error": "Category name required"}), 400
+
+        db = get_db()
+        if db is not None:
+            db.collection("categories").document(name).delete()
+        else:
+            rest_delete_doc("categories", name)
+        return jsonify({"success": True, "message": f"Category {name} deleted"}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/api/regions", methods=["GET"])
+def get_regions():
+    try:
+        db = get_db()
+        regions = []
+        if db is not None:
+            docs = db.collection("regions").stream()
+            for doc in docs:
+                regions.append(doc.id)
+        else:
+            docs = rest_get_collection("regions")
+            for doc in docs:
+                regions.append(doc.get("id", doc.get("name", "")))
+        if not regions:
+            regions = ["BD", "IND", "Sylhet", "PK", "BR", "US", "Other"]
+        return jsonify({"success": True, "regions": sorted(list(set(regions)))}), 200
+    except Exception as e:
+        return jsonify({"success": True, "regions": ["BD", "IND", "Sylhet", "PK", "BR", "US", "Other"]}), 200
+
+@app.route("/api/admin/add-region", methods=["POST"])
+@require_admin_auth
+def add_region():
+    try:
+        data = request.get_json(silent=True) or {}
+        name = data.get("name", "").strip()
+        if not name:
+            return jsonify({"success": False, "error": "Region name required"}), 400
+
+        db = get_db()
+        if db is not None:
+            db.collection("regions").document(name).set({"name": name, "created_at": get_timestamp()})
+        else:
+            rest_set_doc("regions", name, {"name": name, "created_at": get_timestamp()})
+        return jsonify({"success": True, "message": f"Region {name} added", "name": name}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/api/admin/update-region", methods=["POST"])
+@require_admin_auth
+def update_region():
+    try:
+        data = request.get_json(silent=True) or {}
+        old_name = data.get("old_name", "").strip()
+        new_name = data.get("new_name", "").strip()
+        if not old_name or not new_name:
+            return jsonify({"success": False, "error": "Both old and new region name required"}), 400
+
+        db = get_db()
+        if db is not None:
+            db.collection("regions").document(old_name).delete()
+            db.collection("regions").document(new_name).set({"name": new_name, "created_at": get_timestamp()})
+        else:
+            rest_delete_doc("regions", old_name)
+            rest_set_doc("regions", new_name, {"name": new_name, "created_at": get_timestamp()})
+        return jsonify({"success": True, "message": f"Region renamed to {new_name}", "name": new_name}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/api/admin/delete-region", methods=["POST"])
+@require_admin_auth
+def delete_region():
+    try:
+        data = request.get_json(silent=True) or {}
+        name = data.get("name", "").strip()
+        if not name:
+            return jsonify({"success": False, "error": "Region name required"}), 400
+
+        db = get_db()
+        if db is not None:
+            db.collection("regions").document(name).delete()
+        else:
+            rest_delete_doc("regions", name)
+        return jsonify({"success": True, "message": f"Region {name} deleted"}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 # -----------------------------------------------------------------------------
 # BROADCAST NOTICES & SYSTEM SETTINGS (ADMIN PROTECTED)
