@@ -936,7 +936,7 @@ def add_emote():
 def delete_emote():
     try:
         data = request.get_json(silent=True) or {}
-        emote_id = str(data.get("emote_id", "")).strip()
+        emote_id = str(data.get("emote_id") or data.get("id") or "").strip()
 
         if not emote_id:
             return jsonify({"success": False, "error": "emote_id is required", "message": "emote_id is required"}), 400
@@ -1101,9 +1101,23 @@ def update_category():
         if db is not None:
             db.collection("categories").document(old_name).delete()
             db.collection("categories").document(new_name).set({"name": new_name, "created_at": get_timestamp()})
+            try:
+                emotes_snap = db.collection("emotes").where("category", "==", old_name).stream()
+                for em_doc in emotes_snap:
+                    em_doc.reference.update({"category": new_name})
+            except Exception:
+                pass
         else:
             rest_delete_doc("categories", old_name)
             rest_set_doc("categories", new_name, {"name": new_name, "created_at": get_timestamp()})
+            try:
+                all_emotes = rest_get_collection("emotes")
+                for em in all_emotes:
+                    if em.get("category") == old_name:
+                        em["category"] = new_name
+                        rest_set_doc("emotes", em.get("id", em.get("emote_id")), em)
+            except Exception:
+                pass
         return jsonify({"success": True, "message": f"Category renamed to {new_name}", "name": new_name}), 200
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
@@ -1113,7 +1127,7 @@ def update_category():
 def delete_category():
     try:
         data = request.get_json(silent=True) or {}
-        name = data.get("name", "").strip().upper()
+        name = str(data.get("name") or data.get("category_id") or data.get("id") or "").strip().upper()
         if not name:
             return jsonify({"success": False, "error": "Category name required"}), 400
 
@@ -1303,7 +1317,9 @@ def get_active_notices():
                     pass
 
             target = n.get("target_username", "ALL")
-            if target == "ALL" or (username and target.lower() == username.lower()):
+            targets = [t.strip().lower() for t in str(target).split(",") if t.strip()]
+            user_lower = username.lower() if username else ""
+            if "all" in targets or (user_lower and user_lower in targets):
                 filtered.append(n)
 
         filtered.sort(key=lambda x: x.get("created_at", 0), reverse=True)

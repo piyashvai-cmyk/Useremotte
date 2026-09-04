@@ -1175,6 +1175,42 @@
         </div>
     </div>
 
+    <!-- MODAL 4B-2: EDIT CATEGORY -->
+    <div id="editCategoryModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop hidden">
+        <div class="glass-panel w-full max-w-sm p-6 rounded-2xl border border-amber-500/40 shadow-2xl relative">
+            <div class="flex items-center justify-between pb-3 border-b border-gray-800">
+                <h3 class="text-base font-bold text-white gaming-title flex items-center gap-2">
+                    <i class="fas fa-edit text-amber-400"></i>
+                    <span>Edit Category Name</span>
+                </h3>
+                <button onclick="closeModal('editCategoryModal')" class="text-gray-400 hover:text-white p-1">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <form id="editCategoryForm" class="space-y-4 mt-4">
+                <input type="hidden" id="editOldCategoryName" value="">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
+                        Category Name
+                    </label>
+                    <input type="text" id="editCategoryNameInput" required placeholder="New Name (e.g. VINTAGE)" class="glass-input w-full px-4 py-2.5 rounded-xl text-xs uppercase font-bold text-amber-300">
+                    <p class="text-[10px] text-gray-500 mt-1">This will automatically update all emotes in this category.</p>
+                </div>
+
+                <div class="pt-2 flex gap-3">
+                    <button type="button" onclick="closeModal('editCategoryModal')" class="flex-1 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold text-xs uppercase">
+                        Cancel
+                    </button>
+                    <button type="submit" class="flex-1 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs uppercase flex items-center justify-center gap-2 shadow-lg shadow-amber-600/30">
+                        <i class="fas fa-check"></i>
+                        <span>Save</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- MODAL 4D: MANAGE REGIONS -->
     <div id="manageRegionsModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop hidden">
         <div class="glass-panel w-full max-w-lg p-6 sm:p-8 rounded-2xl border border-orange-500/30 shadow-2xl relative">
@@ -1233,11 +1269,58 @@
                     </select>
                 </div>
 
-                <div id="specificUserContainer" class="hidden">
-                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
-                        Specific Username
-                    </label>
-                    <input type="text" id="noticeSpecificUsername" placeholder="e.g. GamerPro99" class="glass-input w-full px-4 py-2.5 rounded-xl text-xs">
+                <div id="specificUserContainer" class="hidden space-y-3 p-3.5 rounded-xl bg-dark-950/80 border border-blue-500/30">
+                    <div class="flex items-center justify-between">
+                        <label class="text-xs font-bold uppercase tracking-wider text-blue-300 flex items-center gap-1.5">
+                            <i class="fas fa-search text-blue-400"></i>
+                            <span>Search Users & ID Selection (ইউজার সার্চ ও নির্বাচন)</span>
+                        </label>
+                        <span id="noticeSelectedUsersCount" class="text-[10px] font-bold text-blue-400 bg-blue-950/80 px-2 py-0.5 rounded-full border border-blue-500/40">
+                            0 Selected
+                        </span>
+                    </div>
+
+                    <!-- Search Input Box -->
+                    <div class="relative">
+                        <input type="text" 
+                               id="noticeUserSearchInput" 
+                               placeholder="Type username or key characters (e.g. gamer, piyash, 99)..." 
+                               class="glass-input w-full pl-9 pr-8 py-2.5 rounded-xl text-xs" 
+                               oninput="handleNoticeUserSearch(this.value)">
+                        <i class="fas fa-search absolute left-3 top-3 text-gray-400 text-xs"></i>
+                        <button type="button" 
+                                id="noticeUserSearchClear" 
+                                onclick="clearNoticeUserSearch()" 
+                                class="absolute right-2.5 top-2.5 text-gray-400 hover:text-white hidden text-xs p-1">
+                            <i class="fas fa-times-circle"></i>
+                        </button>
+                    </div>
+
+                    <!-- Selected Users Chips -->
+                    <div id="noticeSelectedChipsContainer" class="hidden flex-wrap gap-1.5 max-h-24 overflow-y-auto p-2 rounded-xl bg-blue-950/40 border border-blue-500/20">
+                        <!-- Chips rendered dynamically -->
+                    </div>
+
+                    <!-- Action bar for quick select/clear -->
+                    <div class="flex items-center justify-between text-[11px] px-0.5">
+                        <span class="text-gray-400 text-[10px]" id="noticeSearchMatchesText">Type to filter registered users</span>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="selectAllMatchingNoticeUsers()" class="text-blue-400 hover:text-blue-300 font-bold hover:underline text-[10px] flex items-center gap-1">
+                                <i class="fas fa-check-double"></i> Select All Matches
+                            </button>
+                            <span class="text-gray-600">|</span>
+                            <button type="button" onclick="clearNoticeUserSelection()" class="text-red-400 hover:text-red-300 font-bold hover:underline text-[10px] flex items-center gap-1">
+                                <i class="fas fa-trash-alt"></i> Clear
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Matching Users List with IDs/Keys displayed -->
+                    <div id="noticeSearchResultsList" class="max-h-48 overflow-y-auto space-y-1.5 p-1 rounded-xl bg-dark-900 border border-gray-800 pr-1">
+                        <div class="p-4 text-center text-gray-500 text-xs">Loading registered users...</div>
+                    </div>
+
+                    <input type="hidden" id="noticeSpecificUsername" value="">
                 </div>
 
                 <div>
@@ -1591,6 +1674,8 @@
             noticeTargetSelect?.addEventListener('change', () => {
                 if (noticeTargetSelect.value === 'SPECIFIC') {
                     specificUserContainer.classList.remove('hidden');
+                    const q = document.getElementById('noticeUserSearchInput')?.value || '';
+                    handleNoticeUserSearch(q);
                 } else {
                     specificUserContainer.classList.add('hidden');
                 }
@@ -1679,15 +1764,30 @@
                         catsList.push({ id: docSnap.id, name: data.name || docSnap.id });
                     });
                 }
-                if (catsList.length === 0) {
-                    catsList = [
-                        { id: "EVO", name: "EVO" },
-                        { id: "OLD", name: "OLD" },
-                        { id: "RARE", name: "RARE" },
-                        { id: "POPULAR", name: "POPULAR" },
-                        { id: "SPECIAL", name: "SPECIAL" }
-                    ];
+
+                // Check if categories have been initialized/seeded previously
+                const isSeeded = localStorage.getItem('mpx_categories_seeded') === 'true' || 
+                                 (window.adminState.settings && window.adminState.settings.categories_seeded === true);
+
+                if (catsList.length === 0 && !isSeeded) {
+                    // One-time seeding into Firestore so documents exist and can be deleted/edited permanently
+                    const defaultCats = ["EVO", "OLD", "RARE", "POPULAR", "SPECIAL"];
+                    for (const catName of defaultCats) {
+                        catsList.push({ id: catName, name: catName });
+                        if (db) {
+                            try {
+                                await setDoc(doc(db, "categories", catName), { name: catName, created_at: Date.now() });
+                            } catch (err) {}
+                        }
+                    }
+                    localStorage.setItem('mpx_categories_seeded', 'true');
+                    if (db) {
+                        try {
+                            await setDoc(doc(db, "settings", "config"), { categories_seeded: true }, { merge: true });
+                        } catch (err) {}
+                    }
                 }
+
                 window.adminState.categories = catsList;
                 renderCategoriesList();
                 updateCategorySelects();
@@ -1710,9 +1810,14 @@
                         <span class="w-2 h-2 rounded-full bg-amber-400"></span>
                         <span class="text-xs font-bold text-white uppercase">${escapeHtml(c.name || c.id)}</span>
                     </div>
-                    <button type="button" onclick="deleteCategoryAction('${escapeHtml(c.id)}')" class="px-2.5 py-1 rounded bg-red-950/60 hover:bg-red-600 text-red-400 hover:text-white text-[10px] font-bold transition">
-                        <i class="fas fa-trash-alt mr-1"></i> Delete
-                    </button>
+                    <div class="flex items-center gap-1.5">
+                        <button type="button" onclick="openEditCategoryModal('${escapeHtml(c.name || c.id)}')" class="px-2.5 py-1 rounded bg-amber-950/60 hover:bg-amber-600 text-amber-400 hover:text-white text-[10px] font-bold transition flex items-center gap-1">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <button type="button" onclick="deleteCategoryAction('${escapeHtml(c.id || c.name)}')" class="px-2.5 py-1 rounded bg-red-950/60 hover:bg-red-600 text-red-400 hover:text-white text-[10px] font-bold transition flex items-center gap-1">
+                            <i class="fas fa-trash-alt"></i> Delete
+                        </button>
+                    </div>
                 </div>
             `).join('');
         }
@@ -1849,9 +1954,13 @@
                     });
                 }
 
-                // If Firestore emotes is empty, populate fallback preset emotes
-                if (emotesList.length === 0) {
-                    emotesList = [
+                // Check if emotes have been initialized/seeded previously
+                const isSeeded = localStorage.getItem('mpx_emotes_seeded') === 'true' || 
+                                 (window.adminState.settings && window.adminState.settings.emotes_seeded === true);
+
+                // Only populate presets if the collection is completely empty AND never seeded before
+                if (emotesList.length === 0 && !isSeeded) {
+                    const presetList = [
                         { emote_id: "909000063", name: "EVO AK", category: "EVO" },
                         { emote_id: "909051014", name: "Puffy Ride", category: "RARE" },
                         { emote_id: "909033001", name: "EVO M4A1", category: "EVO" },
@@ -1873,7 +1982,31 @@
                         { emote_id: "909049001", name: "Bigdill", category: "RARE" },
                         { emote_id: "909041013", name: "CS GM", category: "RARE" }
                     ];
+
+                    for (const pe of presetList) {
+                        const imgUrl = `https://cdn.jsdelivr.net/gh/ShahGCreator/icon@main/PNG/${pe.emote_id}.png`;
+                        const itemDoc = {
+                            emote_id: pe.emote_id,
+                            name: pe.name,
+                            category: pe.category,
+                            image_url: imgUrl,
+                            created_at: Date.now()
+                        };
+                        emotesList.push({ id: pe.emote_id, ...itemDoc });
+                        if (db) {
+                            try {
+                                await setDoc(doc(db, "emotes", pe.emote_id), itemDoc);
+                            } catch (err) {}
+                        }
+                    }
+                    localStorage.setItem('mpx_emotes_seeded', 'true');
+                    if (db) {
+                        try {
+                            await setDoc(doc(db, "settings", "config"), { emotes_seeded: true }, { merge: true });
+                        } catch (err) {}
+                    }
                 }
+
                 window.adminState.emotes = emotesList;
                 renderEmotesGrid();
             } catch (e) {
@@ -2481,9 +2614,13 @@
             if (!confirm(`Are you sure you want to delete emote: ${emoteId}?`)) return;
 
             showToast(`Removing emote ${emoteId}...`, 'info');
+            // Optimistic UI update so emote disappears instantly
+            window.adminState.emotes = window.adminState.emotes.filter(e => (e.emote_id || e.id) !== emoteId);
+            renderEmotesGrid();
+
             let success = false;
             try {
-                const res = await apiRequest('/api/admin/delete-emote', 'POST', { emote_id: emoteId });
+                const res = await apiRequest('/api/admin/delete-emote', 'POST', { emote_id: emoteId, id: emoteId });
                 if (res && res.success) {
                     success = true;
                 }
@@ -2491,7 +2628,7 @@
                 console.warn("API delete-emote fallback to client Firestore SDK:", e);
             }
 
-            if (!success && db) {
+            if (db) {
                 try {
                     await deleteDoc(doc(db, "emotes", emoteId));
                     success = true;
@@ -2500,21 +2637,37 @@
                 }
             }
 
+            localStorage.setItem('mpx_emotes_seeded', 'true');
+
             if (success) {
                 showToast('Emote removed successfully.', 'success');
                 await loadEmotes();
             } else {
                 showToast('Failed to remove emote.', 'error');
+                await loadEmotes();
             }
+        };
+
+        window.openEditCategoryModal = function(catId) {
+            const cat = window.adminState.categories.find(c => (c.id || c.name) === catId) || { name: catId };
+            const oldName = cat.name || cat.id || catId;
+            document.getElementById('editOldCategoryName').value = oldName;
+            document.getElementById('editCategoryNameInput').value = oldName;
+            openModal('editCategoryModal');
         };
 
         window.deleteCategoryAction = async function(catId) {
             if (!confirm(`Are you sure you want to delete category: ${catId}?`)) return;
 
             showToast(`Deleting category ${catId}...`, 'info');
+            // Optimistic UI update so category disappears instantly
+            window.adminState.categories = window.adminState.categories.filter(c => (c.id || c.name) !== catId);
+            renderCategoriesList();
+            updateCategorySelects();
+
             let success = false;
             try {
-                const res = await apiRequest('/api/admin/delete-category', 'POST', { category_id: catId });
+                const res = await apiRequest('/api/admin/delete-category', 'POST', { category_id: catId, name: catId, id: catId });
                 if (res && res.success) {
                     success = true;
                 }
@@ -2522,7 +2675,7 @@
                 console.warn("Delete category fallback:", e);
             }
 
-            if (!success && db) {
+            if (db) {
                 try {
                     await deleteDoc(doc(db, "categories", catId));
                     success = true;
@@ -2531,13 +2684,208 @@
                 }
             }
 
+            localStorage.setItem('mpx_categories_seeded', 'true');
+
             if (success) {
                 showToast('Category deleted successfully.', 'success');
                 await loadCategories();
             } else {
                 showToast('Failed to delete category.', 'error');
+                await loadCategories();
             }
         };
+
+        // ==========================================
+        // NOTICE TARGET USER SEARCH & MULTI-SELECT
+        // ==========================================
+        window.selectedNoticeUsers = new Set();
+        window.currentNoticeUserMatches = [];
+
+        window.handleNoticeUserSearch = function(query) {
+            const container = document.getElementById('noticeSearchResultsList');
+            const clearBtn = document.getElementById('noticeUserSearchClear');
+            const matchesText = document.getElementById('noticeSearchMatchesText');
+            if (!container) return;
+
+            const q = (query || '').trim().toLowerCase();
+            if (clearBtn) {
+                if (q) clearBtn.classList.remove('hidden');
+                else clearBtn.classList.add('hidden');
+            }
+
+            // Group all registered users and their keys/IDs from window.adminState.keys
+            const userMap = new Map();
+            (window.adminState.keys || []).forEach(k => {
+                const u = (k.username || 'Anonymous').trim();
+                if (!u) return;
+                if (!userMap.has(u)) {
+                    userMap.set(u, {
+                        username: u,
+                        keys: [],
+                        activeCount: 0
+                    });
+                }
+                const entry = userMap.get(u);
+                entry.keys.push(k);
+                if (k.active !== false) entry.activeCount++;
+            });
+
+            const allUsers = Array.from(userMap.values());
+            // Filter by username partial match OR key text match
+            const matches = allUsers.filter(u => {
+                if (!q) return true;
+                if (u.username.toLowerCase().includes(q)) return true;
+                return u.keys.some(k => (k.key || k.id || '').toLowerCase().includes(q));
+            });
+
+            window.currentNoticeUserMatches = matches;
+
+            if (matchesText) {
+                if (q) {
+                    matchesText.textContent = `Found ${matches.length} user(s) matching "${query}"`;
+                } else {
+                    matchesText.textContent = `Showing all ${matches.length} registered user(s)`;
+                }
+            }
+
+            if (matches.length === 0) {
+                container.innerHTML = `
+                    <div class="p-4 text-center text-gray-500 text-xs">
+                        <i class="fas fa-user-slash text-gray-600 mb-1 block text-base"></i>
+                        No registered users found matching "${escapeHtml(query)}".
+                        <div class="mt-2 text-blue-400 font-bold cursor-pointer hover:underline" onclick="selectDirectNoticeUser('${escapeHtml(query)}')">
+                            + Send notice directly to "${escapeHtml(query)}"
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = matches.map(u => {
+                const isSelected = window.selectedNoticeUsers.has(u.username);
+                return `
+                    <div class="p-2.5 rounded-xl border transition-all flex items-start gap-2.5 cursor-pointer ${
+                        isSelected 
+                            ? 'bg-blue-950/60 border-blue-500/60 text-white' 
+                            : 'bg-dark-900/90 border-gray-800 hover:border-blue-500/30 text-gray-300'
+                    }" onclick="toggleNoticeUserSelect('${escapeHtml(u.username)}')">
+                        <input type="checkbox" ${isSelected ? 'checked' : ''} class="mt-0.5 rounded accent-blue-500 pointer-events-none" onclick="event.stopPropagation()">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center justify-between gap-2 flex-wrap">
+                                <span class="text-xs font-bold text-white flex items-center gap-1.5">
+                                    <i class="fas fa-user text-blue-400 text-[11px]"></i>
+                                    <span>${escapeHtml(u.username)}</span>
+                                </span>
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                    u.activeCount > 0 
+                                        ? 'bg-emerald-950/60 border border-emerald-500/40 text-emerald-400' 
+                                        : 'bg-red-950/60 border border-red-500/40 text-red-400'
+                                }">
+                                    ${u.keys.length} ID/Key${u.keys.length > 1 ? 's' : ''} (${u.activeCount} Active)
+                                </span>
+                            </div>
+
+                            <!-- List of IDs for this user -->
+                            <div class="flex flex-wrap gap-1 mt-1.5">
+                                ${u.keys.map(k => `
+                                    <span class="font-mono text-[10px] px-1.5 py-0.5 rounded bg-black/50 border border-gray-800 text-gray-300 flex items-center gap-1">
+                                        <i class="fas fa-key text-[9px] text-amber-400/80"></i>
+                                        <span>${escapeHtml(k.key || k.id)}</span>
+                                        <span class="text-[9px] text-gray-500 font-sans">(${k.validity_days || 7}d)</span>
+                                    </span>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        };
+
+        window.toggleNoticeUserSelect = function(username) {
+            if (!username) return;
+            if (window.selectedNoticeUsers.has(username)) {
+                window.selectedNoticeUsers.delete(username);
+            } else {
+                window.selectedNoticeUsers.add(username);
+            }
+            updateNoticeSelectedUI();
+            const q = document.getElementById('noticeUserSearchInput')?.value || '';
+            handleNoticeUserSearch(q);
+        };
+
+        window.selectDirectNoticeUser = function(username) {
+            const u = (username || '').trim();
+            if (!u) return;
+            window.selectedNoticeUsers.add(u);
+            updateNoticeSelectedUI();
+            document.getElementById('noticeUserSearchInput').value = '';
+            handleNoticeUserSearch('');
+        };
+
+        window.selectAllMatchingNoticeUsers = function() {
+            (window.currentNoticeUserMatches || []).forEach(u => {
+                window.selectedNoticeUsers.add(u.username);
+            });
+            updateNoticeSelectedUI();
+            const q = document.getElementById('noticeUserSearchInput')?.value || '';
+            handleNoticeUserSearch(q);
+        };
+
+        window.clearNoticeUserSelection = function() {
+            window.selectedNoticeUsers.clear();
+            updateNoticeSelectedUI();
+            const q = document.getElementById('noticeUserSearchInput')?.value || '';
+            handleNoticeUserSearch(q);
+        };
+
+        window.removeNoticeSelectedChip = function(username) {
+            window.selectedNoticeUsers.delete(username);
+            updateNoticeSelectedUI();
+            const q = document.getElementById('noticeUserSearchInput')?.value || '';
+            handleNoticeUserSearch(q);
+        };
+
+        window.clearNoticeUserSearch = function() {
+            const inp = document.getElementById('noticeUserSearchInput');
+            if (inp) {
+                inp.value = '';
+                inp.focus();
+            }
+            handleNoticeUserSearch('');
+        };
+
+        function updateNoticeSelectedUI() {
+            const countBadge = document.getElementById('noticeSelectedUsersCount');
+            const chipsContainer = document.getElementById('noticeSelectedChipsContainer');
+            const hiddenTargetInput = document.getElementById('noticeSpecificUsername');
+
+            const usersArr = Array.from(window.selectedNoticeUsers);
+            if (countBadge) {
+                countBadge.textContent = `${usersArr.length} Selected`;
+            }
+
+            if (hiddenTargetInput) {
+                hiddenTargetInput.value = usersArr.join(', ');
+            }
+
+            if (chipsContainer) {
+                if (usersArr.length === 0) {
+                    chipsContainer.classList.add('hidden');
+                    chipsContainer.innerHTML = '';
+                } else {
+                    chipsContainer.classList.remove('hidden');
+                    chipsContainer.innerHTML = usersArr.map(u => `
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-900/60 border border-blue-500/40 text-blue-200 text-xs font-bold">
+                            <i class="fas fa-user text-[10px]"></i>
+                            <span>${escapeHtml(u)}</span>
+                            <button type="button" onclick="removeNoticeSelectedChip('${escapeHtml(u)}')" class="text-blue-400 hover:text-white ml-0.5">
+                                <i class="fas fa-times-circle text-[11px]"></i>
+                            </button>
+                        </span>
+                    `).join('');
+                }
+            }
+        }
 
         window.deleteRegionAction = async function(regId) {
             if (regId === 'ALL') {
@@ -3028,11 +3376,81 @@
 
             // Send Broadcast Notice Form
             const sendNoticeForm = document.getElementById('sendNoticeForm');
+            // Edit Category Form
+            const editCategoryForm = document.getElementById('editCategoryForm');
+            editCategoryForm?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const oldName = document.getElementById('editOldCategoryName').value.trim().toUpperCase();
+                const newName = document.getElementById('editCategoryNameInput').value.trim().toUpperCase();
+                if (!oldName || !newName) return;
+                if (oldName === newName) {
+                    closeModal('editCategoryModal');
+                    return;
+                }
+
+                showToast(`Renaming category ${oldName} to ${newName}...`, 'info');
+                let success = false;
+                try {
+                    const res = await apiRequest('/api/admin/update-category', 'POST', { old_name: oldName, new_name: newName });
+                    if (res && res.success) success = true;
+                } catch (err) {
+                    console.warn("API update-category fallback:", err);
+                }
+
+                if (db) {
+                    try {
+                        await deleteDoc(doc(db, "categories", oldName));
+                        await setDoc(doc(db, "categories", newName), { name: newName, created_at: Date.now() });
+                        // Update emotes that were in this category
+                        const emotesSnap = await getDocs(collection(db, "emotes"));
+                        emotesSnap.forEach(async (emDoc) => {
+                            const data = emDoc.data();
+                            if (data.category === oldName) {
+                                await updateDoc(doc(db, "emotes", emDoc.id), { category: newName });
+                            }
+                        });
+                        success = true;
+                    } catch (fErr) {
+                        console.error("Firestore update category error:", fErr);
+                    }
+                }
+
+                localStorage.setItem('mpx_categories_seeded', 'true');
+
+                if (success) {
+                    showToast(`Category renamed to ${newName}!`, 'success');
+                    closeModal('editCategoryModal');
+                    await loadCategories();
+                    await loadEmotes();
+                } else {
+                    showToast('Failed to update category.', 'error');
+                }
+            });
+
+            // Send Broadcast Notice Form
+            const sendNoticeForm = document.getElementById('sendNoticeForm');
             sendNoticeForm?.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const targetType = document.getElementById('noticeTargetSelect').value;
-                const target_username = targetType === 'SPECIFIC' ? 
-                                        document.getElementById('noticeSpecificUsername').value.trim() : 'ALL';
+                let target_username = 'ALL';
+                if (targetType === 'SPECIFIC') {
+                    const selectedArr = Array.from(window.selectedNoticeUsers);
+                    const typedVal = document.getElementById('noticeUserSearchInput')?.value.trim();
+                    const hiddenVal = document.getElementById('noticeSpecificUsername')?.value.trim();
+                    
+                    if (selectedArr.length > 0) {
+                        target_username = selectedArr.join(', ');
+                    } else if (hiddenVal) {
+                        target_username = hiddenVal;
+                    } else if (typedVal) {
+                        target_username = typedVal;
+                    }
+
+                    if (!target_username || target_username === 'ALL') {
+                        showToast('Please search and select at least one username or enter a target name.', 'warning');
+                        return;
+                    }
+                }
                 const message = document.getElementById('noticeMessageText').value.trim();
 
                 const publishAtVal = document.getElementById('noticePublishAt')?.value;

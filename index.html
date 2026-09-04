@@ -497,10 +497,10 @@
       <div class="flex items-center justify-between pt-2 border-t border-white/10">
         <div class="text-xs text-amber-400 font-semibold flex items-center gap-1.5">
           <i class="fas fa-clock fa-spin"></i>
-          <span>Auto-redirecting in <strong id="noticeTimerSec" class="text-white text-sm font-black">10</strong>s</span>
+          <span>Auto-closing in <strong id="noticeTimerSec" class="text-white text-sm font-black">10</strong>s</span>
         </div>
-        <button type="button" onclick="closeNoticeAndGoToProfile()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-extrabold text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-lg">
-          <span>Go to Profile</span>
+        <button type="button" onclick="closeNoticeAndStayHome()" class="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-black text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-lg">
+          <span>GO</span>
           <i class="fas fa-arrow-right"></i>
         </button>
       </div>
@@ -1960,16 +1960,15 @@
             });
           });
 
-          // Always merge default emotes with custom emotes from Firestore
-          const customIds = new Set(list.map(e => String(e.id)));
-          const merged = [...list];
-          DEFAULT_EMOTES.forEach(def => {
-            if (!customIds.has(String(def.id))) {
-              merged.push(def);
-            }
-          });
-
-          allEmotes = merged;
+          // When Firestore has documents, use them directly as single source of truth
+          // Only fallback to presets if Firestore collection is completely empty
+          if (list.length > 0) {
+            allEmotes = list;
+          } else if (snap.empty) {
+            allEmotes = [...DEFAULT_EMOTES];
+          } else {
+            allEmotes = list;
+          }
           renderEmotes();
         }, (err) => {
           console.warn("Emotes real-time sync error:", err);
@@ -2124,7 +2123,8 @@
             }
           });
 
-          if (cats.length <= 2) {
+          // Only load defaults if Firestore collection is completely empty
+          if (cats.length <= 2 && snap.empty) {
             cats.push("EVO", "OLD", "RARE", "POPULAR", "SPECIAL");
           }
 
@@ -2214,12 +2214,12 @@
         if (noticeRemainingSec <= 0) {
           clearInterval(noticeRedirectTimer);
           noticeRedirectTimer = null;
-          window.closeNoticeAndGoToProfile();
+          window.closeNoticeAndStayHome();
         }
       }, 1000);
     }
 
-    window.closeNoticeAndGoToProfile = function() {
+    window.closeNoticeAndStayHome = function() {
       if (noticeRedirectTimer) {
         clearInterval(noticeRedirectTimer);
         noticeRedirectTimer = null;
@@ -2233,9 +2233,10 @@
         const noticeKey = activeNoticesList.map(n => n.id || n.message).join("_");
         sessionStorage.setItem("mpx_notice_seen_" + noticeKey, "true");
       }
-      window.openTab("profile");
+      window.openTab("home");
       window.playClickSound();
     };
+    window.closeNoticeAndGoToProfile = window.closeNoticeAndStayHome;
 
     let rawNoticesCache = [];
 
@@ -2256,7 +2257,9 @@
           }
 
           const target = d.target_username || "ALL";
-          if (target === "ALL" || (currentUserSession && target.toLowerCase() === currentUserSession.username.toLowerCase())) {
+          const targetList = target.split(",").map(t => t.trim().toLowerCase()).filter(Boolean);
+          const currentUsername = (currentUserSession && currentUserSession.username) ? currentUserSession.username.trim().toLowerCase() : "";
+          if (targetList.includes("all") || (currentUsername && targetList.includes(currentUsername))) {
             list.push(d);
           }
         }
