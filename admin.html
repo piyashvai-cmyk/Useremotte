@@ -679,6 +679,60 @@
                                        class="glass-input w-full px-4 py-3 rounded-xl text-sm font-medium">
                             </div>
 
+                            <!-- Social & Web Link Configuration -->
+                            <div class="pt-4 border-t border-gray-800 space-y-4">
+                                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                                    <i class="fas fa-link text-orange-500"></i>
+                                    <span>External & Support Links Configuration</span>
+                                </h3>
+
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label for="settingWhatsappLink" class="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
+                                            <i class="fab fa-whatsapp text-emerald-400 mr-1"></i> WhatsApp Support Link
+                                        </label>
+                                        <input type="text" 
+                                               id="settingWhatsappLink" 
+                                               placeholder="https://wa.me/+8801858370922"
+                                               class="glass-input w-full px-4 py-2.5 rounded-xl text-xs font-mono">
+                                        <p class="text-[10px] text-gray-500 mt-1">Direct link used in client Help/Support buttons</p>
+                                    </div>
+
+                                    <div>
+                                        <label for="settingTelegramLink" class="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
+                                            <i class="fab fa-telegram text-sky-400 mr-1"></i> Telegram Channel / Contact
+                                        </label>
+                                        <input type="text" 
+                                               id="settingTelegramLink" 
+                                               placeholder="https://t.me/FFH_PIYASH"
+                                               class="glass-input w-full px-4 py-2.5 rounded-xl text-xs font-mono">
+                                        <p class="text-[10px] text-gray-500 mt-1">Direct link used in client Telegram buttons</p>
+                                    </div>
+
+                                    <div>
+                                        <label for="settingWebsiteLink" class="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
+                                            <i class="fas fa-globe text-blue-400 mr-1"></i> Official Website Link
+                                        </label>
+                                        <input type="text" 
+                                               id="settingWebsiteLink" 
+                                               placeholder="https://yourwebsite.com (Leave blank for 'Coming Soon')"
+                                               class="glass-input w-full px-4 py-2.5 rounded-xl text-xs font-mono">
+                                        <p class="text-[10px] text-gray-500 mt-1">If blank, clicking Globe icon shows "Coming Soon"</p>
+                                    </div>
+
+                                    <div>
+                                        <label for="settingPlayerWebLink" class="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
+                                            <i class="fas fa-users text-amber-400 mr-1"></i> 5-6 Player Web Link
+                                        </label>
+                                        <input type="text" 
+                                               id="settingPlayerWebLink" 
+                                               placeholder="https://playerweb.example.com (Leave blank for 'Coming Soon')"
+                                               class="glass-input w-full px-4 py-2.5 rounded-xl text-xs font-mono">
+                                        <p class="text-[10px] text-gray-500 mt-1">If blank, clicking 5-6 Player Web icon shows "Coming Soon"</p>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="pt-4 border-t border-gray-800 flex items-center justify-between">
                                 <div>
                                     <p class="text-sm font-bold text-white">Maintenance Mode</p>
@@ -776,13 +830,13 @@
         </div>
     </div>
 
-    <!-- MODAL 2: EXTEND KEY -->
+    <!-- MODAL 2: ADJUST KEY VALIDITY (TIME INCREASE / DECREASE) -->
     <div id="extendKeyModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop hidden">
-        <div class="glass-panel w-full max-w-md p-6 rounded-2xl border border-red-500/30 shadow-2xl relative">
+        <div class="glass-panel w-full max-w-md p-6 rounded-2xl border border-orange-500/30 shadow-2xl relative">
             <div class="flex items-center justify-between pb-4 border-b border-gray-800">
                 <h3 class="text-lg font-bold text-white gaming-title flex items-center gap-2">
-                    <i class="fas fa-calendar-plus text-orange-500"></i>
-                    <span>Extend Key Validity</span>
+                    <i class="fas fa-clock text-orange-500"></i>
+                    <span>Adjust Key Validity (সময় বাড়ানো / কমানো)</span>
                 </h3>
                 <button onclick="closeModal('extendKeyModal')" class="text-gray-400 hover:text-white p-1">
                     <i class="fas fa-times"></i>
@@ -797,11 +851,51 @@
                     <input type="text" id="extendTargetKey" readonly class="glass-input w-full px-4 py-2.5 rounded-xl text-xs font-mono bg-dark-900 text-gray-400">
                 </div>
 
+                <!-- Current Validity Status -->
+                <div class="flex items-center justify-between p-3 rounded-xl bg-dark-900/80 border border-gray-800">
+                    <span class="text-xs text-gray-400 font-medium">Current Validity:</span>
+                    <span id="extendCurrentDaysDisplay" class="text-xs font-bold text-amber-400 font-mono">7 Days</span>
+                </div>
+
+                <!-- Mode Selection -->
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
-                        Extra Days to Add
+                    <label class="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1.5">
+                        Adjustment Action (কী করতে চান?)
                     </label>
-                    <input type="number" id="extendDays" value="7" min="1" max="3650" required class="glass-input w-full px-4 py-2.5 rounded-xl text-xs">
+                    <div class="grid grid-cols-3 gap-2">
+                        <button type="button" onclick="setAdjustMode('ADD')" id="adjustModeBtn_ADD" class="py-2 px-3 rounded-xl border border-emerald-500/40 bg-emerald-950/60 text-emerald-400 font-bold text-xs flex items-center justify-center gap-1.5 transition-all">
+                            <i class="fas fa-plus"></i>
+                            <span>Add Time</span>
+                        </button>
+                        <button type="button" onclick="setAdjustMode('SUBTRACT')" id="adjustModeBtn_SUBTRACT" class="py-2 px-3 rounded-xl border border-gray-700 bg-dark-800 text-gray-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-all">
+                            <i class="fas fa-minus"></i>
+                            <span>Reduce</span>
+                        </button>
+                        <button type="button" onclick="setAdjustMode('SET')" id="adjustModeBtn_SET" class="py-2 px-3 rounded-xl border border-gray-700 bg-dark-800 text-gray-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-all">
+                            <i class="fas fa-edit"></i>
+                            <span>Set Exact</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <label id="adjustDaysLabel" class="text-xs font-bold uppercase tracking-wider text-gray-300">
+                            Days to Add (+ দিন)
+                        </label>
+                        <span id="adjustResultPreview" class="text-xs font-bold text-emerald-400 font-mono">New: 14 Days</span>
+                    </div>
+                    <input type="number" id="extendDays" value="7" min="1" max="3650" required oninput="updateAdjustPreview()" class="glass-input w-full px-4 py-2.5 rounded-xl text-xs">
+                </div>
+
+                <!-- Quick Buttons -->
+                <div class="flex items-center gap-2 pt-1 flex-wrap">
+                    <span class="text-[10px] uppercase font-bold text-gray-500">Quick:</span>
+                    <button type="button" onclick="applyQuickAdjust(-7)" class="px-2 py-1 rounded-lg bg-red-950/50 hover:bg-red-800 border border-red-800/40 text-red-300 text-[11px] font-bold">-7 Days</button>
+                    <button type="button" onclick="applyQuickAdjust(-1)" class="px-2 py-1 rounded-lg bg-red-950/50 hover:bg-red-800 border border-red-800/40 text-red-300 text-[11px] font-bold">-1 Day</button>
+                    <button type="button" onclick="applyQuickAdjust(1)" class="px-2 py-1 rounded-lg bg-emerald-950/50 hover:bg-emerald-800 border border-emerald-800/40 text-emerald-300 text-[11px] font-bold">+1 Day</button>
+                    <button type="button" onclick="applyQuickAdjust(7)" class="px-2 py-1 rounded-lg bg-emerald-950/50 hover:bg-emerald-800 border border-emerald-800/40 text-emerald-300 text-[11px] font-bold">+7 Days</button>
+                    <button type="button" onclick="applyQuickAdjust(30)" class="px-2 py-1 rounded-lg bg-emerald-950/50 hover:bg-emerald-800 border border-emerald-800/40 text-emerald-300 text-[11px] font-bold">+30 Days</button>
                 </div>
 
                 <div class="pt-3 flex gap-3">
@@ -809,7 +903,7 @@
                         Cancel
                     </button>
                     <button type="submit" id="extendSubmitBtn" class="flex-1 py-3 rounded-xl bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white font-bold text-xs uppercase shadow-neon-orange flex items-center justify-center gap-2">
-                        <span>Extend Validity</span>
+                        <span id="extendBtnText">Apply Update</span>
                     </button>
                 </div>
             </form>
@@ -1151,6 +1245,34 @@
                         Notice Message Content
                     </label>
                     <textarea id="noticeMessageText" required rows="4" placeholder="Enter broadcast text for clients..." class="glass-input w-full px-4 py-2.5 rounded-xl text-xs resize-none"></textarea>
+                </div>
+
+                <!-- Schedule & Auto-Delete Options -->
+                <div class="p-3.5 rounded-xl bg-dark-900/90 border border-blue-500/20 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-white flex items-center gap-1.5">
+                            <i class="fas fa-calendar-alt text-blue-400"></i>
+                            <span>Schedule & Auto-Deletion Timing (সময় নির্ধারণ)</span>
+                        </span>
+                        <span class="text-[10px] text-gray-400 font-medium">Optional (ঐচ্ছিক)</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-300 mb-1">
+                                <i class="fas fa-upload text-emerald-400 mr-1"></i> Auto Upload Time (কখন আপলোড হবে)
+                            </label>
+                            <input type="datetime-local" id="noticePublishAt" class="glass-input w-full px-3 py-2 rounded-xl text-xs text-gray-200">
+                            <p class="text-[10px] text-gray-500 mt-0.5">খালি রাখলে সাথে সাথে আপলোড হবে</p>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-300 mb-1">
+                                <i class="fas fa-trash-alt text-red-400 mr-1"></i> Auto Delete Time (কখন ডিলিট হবে)
+                            </label>
+                            <input type="datetime-local" id="noticeExpiresAt" class="glass-input w-full px-3 py-2 rounded-xl text-xs text-gray-200">
+                            <p class="text-[10px] text-gray-500 mt-0.5">সময় শেষ হলে অটোমেটিক ডিলিট/হাইড হবে</p>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="pt-3 flex gap-3">
@@ -1785,6 +1907,10 @@
                         document.getElementById('settingAppName').value = data.app_name || 'MPX PANEL';
                         document.getElementById('settingEmbedUrl').value = data.embed_url || '';
                         document.getElementById('settingMaintenanceMode').checked = !!data.maintenance_mode;
+                        document.getElementById('settingWhatsappLink').value = data.whatsapp_link || 'https://wa.me/+8801858370922';
+                        document.getElementById('settingTelegramLink').value = data.telegram_link || 'http://t.me/FFH_PIYASH';
+                        document.getElementById('settingWebsiteLink').value = data.website_link || '';
+                        document.getElementById('settingPlayerWebLink').value = data.player_web_link || '';
                     }
                 }
             } catch (e) {
@@ -1858,8 +1984,8 @@
                             }
                         </td>
                         <td class="p-4 text-right space-x-2">
-                            <button onclick="openExtendModal('${escapeHtml(keyStr)}')" class="px-3 py-1.5 rounded-lg bg-orange-600/20 hover:bg-orange-600 text-orange-400 hover:text-white border border-orange-500/30 transition-all text-xs font-bold">
-                                <i class="fas fa-calendar-plus mr-1"></i> Extend
+                            <button onclick="openExtendModal('${escapeHtml(keyStr)}')" class="px-3 py-1.5 rounded-lg bg-orange-600/20 hover:bg-orange-600 text-orange-400 hover:text-white border border-orange-500/30 transition-all text-xs font-bold" title="Adjust Validity (সময় বাড়ানো / কমানো)">
+                                <i class="fas fa-clock mr-1"></i> Time (+/-)
                             </button>
                             ${isActive ? `
                                 <button onclick="banKeyAction('${escapeHtml(keyStr)}')" class="px-3 py-1.5 rounded-lg bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 transition-all text-xs font-bold">
@@ -2044,9 +2170,27 @@
                 return;
             }
 
+            const now = Date.now();
             container.innerHTML = notices.map(n => {
                 const target = n.target_username || 'ALL';
                 const isAll = target === 'ALL';
+                const isScheduled = n.publish_at && now < n.publish_at;
+                const isExpired = n.expires_at && now > n.expires_at;
+                const willExpire = n.expires_at && now <= n.expires_at;
+
+                let statusBadge = '';
+                if (isScheduled) {
+                    statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-950 border border-amber-500/40 text-amber-400"><i class="fas fa-clock mr-1"></i> Scheduled: ${formatDate(n.publish_at)}</span>`;
+                } else if (isExpired) {
+                    statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-red-950 border border-red-500/40 text-red-400"><i class="fas fa-times-circle mr-1"></i> Auto-Expired: ${formatDate(n.expires_at)}</span>`;
+                } else {
+                    statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-950 border border-emerald-500/40 text-emerald-400">🟢 Live</span>`;
+                }
+
+                let deleteTimerBadge = '';
+                if (willExpire && !isExpired) {
+                    deleteTimerBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-950 border border-purple-500/40 text-purple-300"><i class="fas fa-hourglass-half mr-1"></i> Auto-Delete: ${formatDate(n.expires_at)}</span>`;
+                }
 
                 return `
                     <div class="glass-card p-5 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -2055,11 +2199,13 @@
                                 <i class="fas fa-bullhorn"></i>
                             </div>
                             <div>
-                                <div class="flex items-center gap-2 mb-1">
+                                <div class="flex items-center gap-2 mb-1 flex-wrap">
                                     <span class="px-2.5 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider ${isAll ? 'bg-blue-950 border border-blue-500/40 text-blue-400' : 'bg-purple-950 border border-purple-500/40 text-purple-400'}">
                                         Target: ${escapeHtml(target)}
                                     </span>
                                     <span class="text-[10px] text-gray-400">${formatDate(n.created_at)}</span>
+                                    ${statusBadge}
+                                    ${deleteTimerBadge}
                                 </div>
                                 <p class="text-xs text-gray-200 font-medium whitespace-pre-line">${escapeHtml(n.message)}</p>
                             </div>
@@ -2077,9 +2223,79 @@
         // ==========================================
         // ACTION HANDLERS & MODAL BINDINGS
         // ==========================================
+        window.currentAdjustMode = 'ADD'; // 'ADD', 'SUBTRACT', 'SET'
+
+        window.setAdjustMode = function(mode) {
+            window.currentAdjustMode = mode;
+            ['ADD', 'SUBTRACT', 'SET'].forEach(m => {
+                const btn = document.getElementById('adjustModeBtn_' + m);
+                if (btn) {
+                    if (m === mode) {
+                        btn.className = 'py-2 px-3 rounded-xl border border-emerald-500/50 bg-emerald-950/70 text-emerald-400 font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm';
+                    } else {
+                        btn.className = 'py-2 px-3 rounded-xl border border-gray-700 bg-dark-800 text-gray-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-all';
+                    }
+                }
+            });
+
+            const label = document.getElementById('adjustDaysLabel');
+            if (label) {
+                if (mode === 'ADD') label.textContent = 'Days to Add (+ দিন)';
+                else if (mode === 'SUBTRACT') label.textContent = 'Days to Reduce (- দিন)';
+                else label.textContent = 'Exact Total Days (মোট দিন)';
+            }
+            window.updateAdjustPreview();
+        };
+
+        window.applyQuickAdjust = function(days) {
+            const input = document.getElementById('extendDays');
+            if (!input) return;
+            if (days > 0) {
+                window.setAdjustMode('ADD');
+                input.value = days;
+            } else {
+                window.setAdjustMode('SUBTRACT');
+                input.value = Math.abs(days);
+            }
+            window.updateAdjustPreview();
+        };
+
+        window.updateAdjustPreview = function() {
+            const keyStr = document.getElementById('extendTargetKey')?.value;
+            const inputVal = parseInt(document.getElementById('extendDays')?.value) || 0;
+            const targetKeyObj = window.adminState.keys.find(k => (k.key || k.id) === keyStr);
+            const curDays = targetKeyObj ? parseInt(targetKeyObj.validity_days || 7) : 7;
+            
+            const curDisplay = document.getElementById('extendCurrentDaysDisplay');
+            if (curDisplay) curDisplay.textContent = `${curDays} Days`;
+
+            let newDays = curDays;
+            if (window.currentAdjustMode === 'ADD') {
+                newDays = curDays + inputVal;
+            } else if (window.currentAdjustMode === 'SUBTRACT') {
+                newDays = Math.max(1, curDays - inputVal);
+            } else {
+                newDays = Math.max(1, inputVal);
+            }
+
+            const preview = document.getElementById('adjustResultPreview');
+            if (preview) {
+                preview.textContent = `New: ${newDays} Days`;
+                if (newDays > curDays) {
+                    preview.className = 'text-xs font-bold text-emerald-400 font-mono';
+                } else if (newDays < curDays) {
+                    preview.className = 'text-xs font-bold text-red-400 font-mono';
+                } else {
+                    preview.className = 'text-xs font-bold text-amber-400 font-mono';
+                }
+            }
+        };
+
         window.openExtendModal = function(keyStr) {
             document.getElementById('extendTargetKey').value = keyStr;
             document.getElementById('extendDays').value = '7';
+            window.setAdjustMode('ADD');
+            window.updateAdjustPreview();
             openModal('extendKeyModal');
         };
 
@@ -2459,44 +2675,61 @@
                 }
             });
 
-            // Extend Key Form
+            // Extend / Adjust Key Form
             const extendKeyForm = document.getElementById('extendKeyForm');
             extendKeyForm?.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const key = document.getElementById('extendTargetKey').value.trim();
-                const extra_days = parseInt(document.getElementById('extendDays').value) || 7;
+                const inputVal = parseInt(document.getElementById('extendDays').value) || 1;
+                const targetKeyObj = window.adminState.keys.find(k => (k.key || k.id) === key);
+                const curDays = targetKeyObj ? parseInt(targetKeyObj.validity_days || 7) : 7;
 
-                showToast(`Extending key validity by ${extra_days} days...`, 'info');
+                let new_validity_days = curDays;
+                let days_delta = 0;
+                if (window.currentAdjustMode === 'ADD') {
+                    days_delta = inputVal;
+                    new_validity_days = curDays + inputVal;
+                } else if (window.currentAdjustMode === 'SUBTRACT') {
+                    days_delta = -inputVal;
+                    new_validity_days = Math.max(1, curDays - inputVal);
+                } else {
+                    new_validity_days = Math.max(1, inputVal);
+                    days_delta = new_validity_days - curDays;
+                }
+
+                showToast(`Updating validity to ${new_validity_days} days...`, 'info');
                 let success = false;
                 try {
-                    const res = await apiRequest('/api/admin/extend-key', 'POST', { key, extra_days });
+                    const res = await apiRequest('/api/admin/adjust-key-validity', 'POST', { 
+                        key, 
+                        new_validity_days,
+                        days_delta 
+                    });
                     if (res && res.success) {
                         success = true;
                     }
                 } catch (err) {
-                    console.warn("API extend-key fallback to client Firestore SDK:", err);
+                    console.warn("API adjust-key fallback to client Firestore SDK:", err);
                 }
 
                 if (!success && db) {
                     try {
-                        const targetKeyObj = window.adminState.keys.find(k => (k.key || k.id) === key);
-                        const curDays = targetKeyObj ? (targetKeyObj.validity_days || 0) : 0;
                         await updateDoc(doc(db, "keys", key), {
-                            validity_days: curDays + extra_days,
+                            validity_days: new_validity_days,
                             active: true
                         });
                         success = true;
                     } catch (fErr) {
-                        console.error("Client Firestore SDK extend key error:", fErr);
+                        console.error("Client Firestore SDK adjust key error:", fErr);
                     }
                 }
 
                 if (success) {
-                    showToast('Validity extended successfully!', 'success');
+                    showToast(`Validity updated successfully! (${new_validity_days} days)`, 'success');
                     closeModal('extendKeyModal');
                     loadKeys();
                 } else {
-                    showToast('Failed to extend key.', 'error');
+                    showToast('Failed to update key validity.', 'error');
                 }
             });
 
@@ -2802,6 +3035,12 @@
                                         document.getElementById('noticeSpecificUsername').value.trim() : 'ALL';
                 const message = document.getElementById('noticeMessageText').value.trim();
 
+                const publishAtVal = document.getElementById('noticePublishAt')?.value;
+                const publish_at = publishAtVal ? new Date(publishAtVal).getTime() : null;
+
+                const expiresAtVal = document.getElementById('noticeExpiresAt')?.value;
+                const expires_at = expiresAtVal ? new Date(expiresAtVal).getTime() : null;
+
                 if (!message) {
                     showToast('Broadcast message content cannot be empty.', 'warning');
                     return;
@@ -2818,7 +3057,10 @@
                 let success = false;
                 try {
                     const res = await apiRequest('/api/admin/send-notice', 'POST', {
-                        target_username, message
+                        target_username, 
+                        message,
+                        publish_at,
+                        expires_at
                     });
                     if (res && res.success) {
                         success = true;
@@ -2832,6 +3074,8 @@
                         const noticeDoc = {
                             target_username,
                             message,
+                            publish_at: publish_at || null,
+                            expires_at: expires_at || null,
                             active: true,
                             created_at: Date.now()
                         };
@@ -2847,7 +3091,7 @@
                 spinner.classList.add('hidden');
 
                 if (success) {
-                    showToast('Notice broadcasted to clients!', 'success');
+                    showToast('Notice broadcasted/scheduled successfully!', 'success');
                     closeModal('sendNoticeModal');
                     sendNoticeForm.reset();
                     loadNotices();
@@ -2863,6 +3107,10 @@
                 const app_name = document.getElementById('settingAppName').value.trim();
                 const embed_url = document.getElementById('settingEmbedUrl').value.trim();
                 const maintenance_mode = document.getElementById('settingMaintenanceMode').checked;
+                const whatsapp_link = document.getElementById('settingWhatsappLink').value.trim();
+                const telegram_link = document.getElementById('settingTelegramLink').value.trim();
+                const website_link = document.getElementById('settingWebsiteLink').value.trim();
+                const player_web_link = document.getElementById('settingPlayerWebLink').value.trim();
 
                 const btn = document.getElementById('saveSettingsBtn');
                 btn.disabled = true;
@@ -2871,7 +3119,13 @@
                 let success = false;
                 try {
                     const res = await apiRequest('/api/admin/update-settings', 'POST', {
-                        app_name, embed_url, maintenance_mode
+                        app_name, 
+                        embed_url, 
+                        maintenance_mode,
+                        whatsapp_link,
+                        telegram_link,
+                        website_link,
+                        player_web_link
                     });
                     if (res && res.success) {
                         success = true;
@@ -2886,6 +3140,10 @@
                             app_name,
                             embed_url,
                             maintenance_mode,
+                            whatsapp_link,
+                            telegram_link,
+                            website_link,
+                            player_web_link,
                             updated_at: Date.now()
                         };
                         await setDoc(doc(db, "settings", "config"), settingsDoc, { merge: true });

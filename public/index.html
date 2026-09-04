@@ -14,7 +14,23 @@
   <!-- FontAwesome 6.4.0 CDN -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
+  <script>
+    // Immediate early session detection: Prevents login page from flashing on refresh
+    try {
+      if (localStorage.getItem("mpx_user_session")) {
+        document.documentElement.classList.add("mpx-session-active");
+      }
+    } catch (e) {}
+  </script>
+
   <style>
+    html.mpx-session-active #loginScreen {
+      display: none !important;
+    }
+    html.mpx-session-active #mainApp {
+      display: flex !important;
+    }
+
     :root {
       --primary: #eab308;
       --primary-glow: rgba(234, 179, 8, 0.4);
@@ -461,6 +477,128 @@
     </div>
   </div>
 
+  <!-- NOTICE ENTRY MODAL (Auto-redirect to Profile after 10s) -->
+  <div id="noticeModal" class="fixed inset-0 z-50 modal-backdrop hidden items-center justify-center p-4">
+    <div class="glass-card max-w-md w-full p-6 relative overflow-hidden border border-amber-500/40 shadow-2xl">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 text-lg">
+          <i class="fas fa-bullhorn"></i>
+        </div>
+        <div>
+          <h3 class="font-bold text-base text-white">Broadcast Notice</h3>
+          <p class="text-[11px] text-gray-400">Important System Announcement</p>
+        </div>
+      </div>
+
+      <div id="noticeModalBody" class="p-4 rounded-xl bg-black/50 border border-white/10 text-sm text-gray-200 whitespace-pre-line leading-relaxed mb-4 max-h-60 overflow-y-auto">
+        <!-- Notice content rendered dynamically -->
+      </div>
+
+      <div class="flex items-center justify-between pt-2 border-t border-white/10">
+        <div class="text-xs text-amber-400 font-semibold flex items-center gap-1.5">
+          <i class="fas fa-clock fa-spin"></i>
+          <span>Auto-redirecting in <strong id="noticeTimerSec" class="text-white text-sm font-black">10</strong>s</span>
+        </div>
+        <button type="button" onclick="closeNoticeAndGoToProfile()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-extrabold text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-lg">
+          <span>Go to Profile</span>
+          <i class="fas fa-arrow-right"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOGOUT CONFIRMATION MODAL (Requires password only, no username, no switch user) -->
+  <div id="logoutModal" class="fixed inset-0 z-50 modal-backdrop hidden items-center justify-center p-4">
+    <div class="glass-card max-w-sm w-full p-6 relative border border-white/20 shadow-2xl">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-xl bg-red-500/20 border border-red-500/30 flex items-center justify-center text-red-400 text-lg">
+          <i class="fas fa-sign-out-alt"></i>
+        </div>
+        <div>
+          <h3 class="font-bold text-base text-white">Confirm Logout</h3>
+          <p class="text-[11px] text-gray-400">Enter your password / key to exit</p>
+        </div>
+      </div>
+
+      <form onsubmit="handleConfirmLogout(event)" class="space-y-4">
+        <div>
+          <label for="logoutPasswordInput" class="block text-xs font-semibold text-gray-300 mb-1.5">
+            Password / Access Key
+          </label>
+          <div class="input-wrapper">
+            <input type="password" id="logoutPasswordInput" required class="input-field" placeholder="Enter key or password" autocomplete="current-password">
+          </div>
+        </div>
+
+        <div class="flex gap-2.5 pt-2">
+          <button type="button" onclick="closeLogoutModal()" class="flex-1 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 font-bold text-xs">
+            Cancel
+          </button>
+          <button type="submit" class="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-lg">
+            <i class="fas fa-power-off"></i>
+            <span>Logout</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ALL NOTICES (NOTICE HUB) MODAL -->
+  <div id="allNoticesModal" class="fixed inset-0 z-50 modal-backdrop hidden items-center justify-center p-4">
+    <div class="glass-card max-w-lg w-full p-6 relative overflow-hidden border border-amber-500/40 shadow-2xl flex flex-col max-h-[85vh]">
+      <div class="flex items-center justify-between pb-4 border-b border-white/10 shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 text-lg">
+            <i class="fas fa-bell"></i>
+          </div>
+          <div>
+            <h3 class="font-extrabold text-base text-white flex items-center gap-2">
+              <span>Notice Center</span>
+              <span id="noticeHubCountBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">0 Active</span>
+            </h3>
+            <p class="text-[11px] text-gray-400">All announcements & scheduled updates</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeNoticeHubModal()" class="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white flex items-center justify-center transition">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div id="noticeHubList" class="flex-1 overflow-y-auto py-4 space-y-3 pr-1">
+        <!-- Rendered dynamically -->
+        <div class="text-center py-8 text-gray-500 text-xs">
+          <i class="fas fa-bell-slash text-2xl mb-2 block text-gray-600"></i>
+          No active notices right now.
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-white/10 shrink-0 flex items-center justify-between">
+        <span class="text-[11px] text-gray-400 flex items-center gap-1.5">
+          <i class="fas fa-circle-check text-emerald-400 text-xs"></i> Live synced
+        </span>
+        <button type="button" onclick="closeNoticeHubModal()" class="px-5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs uppercase tracking-wider transition">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMING SOON MODAL -->
+  <div id="comingSoonModal" class="fixed inset-0 z-50 modal-backdrop hidden items-center justify-center p-4">
+    <div class="glass-card max-w-sm w-full p-6 relative overflow-hidden border border-sky-500/40 shadow-2xl text-center">
+      <div class="w-16 h-16 rounded-2xl bg-sky-500/20 border border-sky-500/40 flex items-center justify-center text-sky-400 text-3xl mx-auto mb-4 animate-bounce">
+        <i class="fas fa-rocket"></i>
+      </div>
+      <h3 id="comingSoonTitle" class="font-black text-xl text-white mb-2">Coming Soon</h3>
+      <p id="comingSoonDesc" class="text-xs text-gray-300 leading-relaxed mb-5">
+        This link has not been set yet by the administrator. It will be available soon!
+      </p>
+      <button type="button" onclick="closeComingSoonModal()" class="btn-primary w-full py-2.5 text-xs uppercase tracking-wider font-extrabold shadow-lg">
+        OK, GOT IT
+      </button>
+    </div>
+  </div>
+
   <!-- 1. LOGIN SCREEN -->
   <div id="loginScreen" class="relative z-10 flex min-h-screen items-center justify-center p-4">
     <div class="glass-card max-w-md w-full p-6 sm:p-8 relative overflow-hidden border border-white/15">
@@ -479,27 +617,16 @@
         <p class="text-xs font-medium text-gray-400 mt-1 uppercase tracking-widest">Next-Gen Gaming Control</p>
       </div>
 
-      <!-- Returning Device Badge -->
-      <div id="returningUserBanner" class="hidden mb-4 p-3 bg-white/5 border border-white/10 rounded-xl flex items-center justify-between text-xs">
-        <div class="flex items-center gap-2 text-gray-300">
-          <i class="fas fa-mobile-alt theme-text"></i>
-          <span>Welcome back, <strong id="savedUsernameText" class="text-white">Player</strong></span>
-        </div>
-        <button type="button" onclick="switchLoginMode(true)" class="text-xs text-amber-400 hover:underline font-semibold">
-          Switch User
-        </button>
-      </div>
-
       <!-- Login Form -->
       <form id="loginForm" onsubmit="handleLoginSubmit(event)" class="space-y-4">
         
-        <!-- Username Field (Hidden on returning device unless switched) -->
+        <!-- Username Field (Optional - Key automatically identifies user) -->
         <div id="usernameFieldGroup">
           <label for="loginUsername" class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">
-            <i class="fas fa-user mr-1.5 theme-text"></i> Username
+            <i class="fas fa-user mr-1.5 theme-text"></i> Username <span class="text-gray-500 font-normal lowercase">(optional)</span>
           </label>
           <div class="input-wrapper">
-            <input type="text" id="loginUsername" class="input-field" placeholder="Enter username" autocomplete="username">
+            <input type="text" id="loginUsername" class="input-field" placeholder="Enter username (or leave blank)" autocomplete="username">
             <div class="input-actions">
               <button type="button" class="action-btn" title="Clear" aria-label="Clear Username" onclick="clearInput('loginUsername')">
                 <i class="fas fa-times-circle"></i>
@@ -514,10 +641,10 @@
         <!-- Access Key Field -->
         <div>
           <label for="loginKey" class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">
-            <i class="fas fa-key mr-1.5 theme-text"></i> Access Key
+            <i class="fas fa-key mr-1.5 theme-text"></i> Access Key / Password <span class="text-red-400">*</span>
           </label>
           <div class="input-wrapper">
-            <input type="text" id="loginKey" required class="input-field" placeholder="Enter access key" autocomplete="off">
+            <input type="text" id="loginKey" required class="input-field" placeholder="Enter access key or password" autocomplete="off">
             <div class="input-actions">
               <button type="button" class="action-btn" title="Clear" aria-label="Clear Key" onclick="clearInput('loginKey')">
                 <i class="fas fa-times-circle"></i>
@@ -529,19 +656,41 @@
           </div>
         </div>
 
-        <button type="submit" id="loginSubmitBtn" class="btn-primary w-full py-3.5 mt-2 flex items-center justify-center gap-2 text-base">
+        <button type="submit" id="loginSubmitBtn" class="btn-primary w-full py-3.5 mt-2 flex items-center justify-center gap-2 text-base font-extrabold shadow-lg">
           <i class="fas fa-bolt"></i>
           <span>LOGIN</span>
         </button>
       </form>
 
+      <!-- Warning Message Required by Admin -->
+      <div class="mt-4 p-3 rounded-xl bg-red-950/50 border border-red-500/40 text-center">
+        <p class="text-xs font-bold text-red-400 leading-snug">
+          <i class="fas fa-exclamation-triangle mr-1 text-red-300"></i>
+          Key পেতে ADMIN কে মেসেজ দিন কেউ কল দিবেন না কল দিলে block করা হবে
+        </p>
+      </div>
+
+      <!-- Contact Support Links -->
+      <div class="mt-3 grid grid-cols-2 gap-2.5">
+        <a href="https://wa.me/+8801858370922" target="_blank" rel="noopener noreferrer"
+           class="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-emerald-600/20 hover:bg-emerald-600 border border-emerald-500/30 text-emerald-400 hover:text-white text-xs font-bold transition-all shadow">
+          <i class="fab fa-whatsapp text-sm"></i>
+          <span>WhatsApp Admin</span>
+        </a>
+        <a href="http://t.me/FFH_PIYASH" target="_blank" rel="noopener noreferrer"
+           class="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-sky-600/20 hover:bg-sky-600 border border-sky-500/30 text-sky-400 hover:text-white text-xs font-bold transition-all shadow">
+          <i class="fab fa-telegram-plane text-sm"></i>
+          <span>Telegram Admin</span>
+        </a>
+      </div>
+
       <!-- System Badge -->
-      <div class="mt-6 pt-5 border-t border-white/10 flex items-center justify-between text-xs text-gray-500">
+      <div class="mt-5 pt-4 border-t border-white/10 flex items-center justify-between text-xs text-gray-500">
         <span class="flex items-center gap-1.5">
           <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
           <span>Server Online</span>
         </span>
-        <span>v2.5 High-Speed</span>
+        <span>v2.6 High-Speed</span>
       </div>
     </div>
   </div>
@@ -585,20 +734,19 @@
 
       <!-- Sidebar Footer Controls -->
       <div class="pt-6 border-t border-white/10 space-y-3">
-        <!-- Global Controls: Sound + Theme -->
-        <div class="flex items-center justify-between p-2 rounded-xl bg-white/5 border border-white/10">
-          <!-- Sound button -->
-          <button type="button" id="sidebarSoundBtn" onclick="toggleSound()" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-300 hover:text-white bg-black/40 border border-white/5 transition" title="Toggle Sound">
+        <!-- Global Controls: Sound + Theme + Bell Notice + Website + 5-6 Player Web -->
+        <div class="grid grid-cols-5 gap-1.5 p-1.5 rounded-xl bg-white/5 border border-white/10 items-center">
+          <!-- 1. Sound button -->
+          <button type="button" id="sidebarSoundBtn" onclick="toggleSound()" class="h-8 rounded-lg flex items-center justify-center text-xs text-gray-300 hover:text-white bg-black/40 border border-white/5 transition" title="Toggle Sound">
             <i class="fas fa-volume-up theme-text" id="sidebarSoundIcon"></i>
-            <span id="sidebarSoundText">Sound ON</span>
           </button>
 
-          <!-- Theme Palette Selector button -->
+          <!-- 2. Theme Palette Selector button -->
           <div class="relative">
-            <button type="button" onclick="toggleThemeDropdown('desktopThemeMenu')" class="w-8 h-8 rounded-lg flex items-center justify-center text-sm text-gray-300 hover:text-white bg-black/40 border border-white/5 theme-text transition" title="Change Theme">
+            <button type="button" onclick="toggleThemeDropdown('desktopThemeMenu')" class="w-full h-8 rounded-lg flex items-center justify-center text-xs text-gray-300 hover:text-white bg-black/40 border border-white/5 theme-text transition" title="Change Theme">
               <i class="fas fa-palette"></i>
             </button>
-            <div id="desktopThemeMenu" class="hidden absolute bottom-10 right-0 p-3 glass-card bg-gray-900/95 border border-white/20 rounded-xl shadow-2xl grid grid-cols-4 gap-2 z-50 w-44">
+            <div id="desktopThemeMenu" class="hidden absolute bottom-10 left-0 p-3 glass-card bg-gray-900/98 border border-white/20 rounded-xl shadow-2xl grid grid-cols-4 gap-2 z-50 w-44">
               <button type="button" onclick="setTheme('yellow')" class="w-8 h-8 rounded-full bg-yellow-500 hover:scale-110 transition border-2 border-white/30" title="Yellow"></button>
               <button type="button" onclick="setTheme('blue')" class="w-8 h-8 rounded-full bg-blue-500 hover:scale-110 transition border-2 border-white/30" title="Blue"></button>
               <button type="button" onclick="setTheme('green')" class="w-8 h-8 rounded-full bg-green-500 hover:scale-110 transition border-2 border-white/30" title="Green"></button>
@@ -609,6 +757,22 @@
               <button type="button" onclick="setTheme('red')" class="w-8 h-8 rounded-full bg-red-500 hover:scale-110 transition border-2 border-white/30" title="Red"></button>
             </div>
           </div>
+
+          <!-- 3. Bell Icon (Notices Hub) -->
+          <button type="button" onclick="openNoticeHubModal()" class="relative h-8 rounded-lg flex items-center justify-center text-xs text-amber-400 hover:text-amber-300 bg-black/40 border border-amber-500/20 hover:border-amber-500/50 transition" title="Notice Center">
+            <i class="fas fa-bell"></i>
+            <span id="noticeBadgeDesktop" class="hidden absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-red-600 text-[9px] font-black text-white flex items-center justify-center animate-pulse">0</span>
+          </button>
+
+          <!-- 4. Website Link Icon -->
+          <button type="button" onclick="openWebsiteLink()" class="h-8 rounded-lg flex items-center justify-center text-xs text-sky-400 hover:text-sky-300 bg-black/40 border border-sky-500/20 hover:border-sky-500/50 transition" title="Official Website">
+            <i class="fas fa-globe"></i>
+          </button>
+
+          <!-- 5. 5-6 Player Web Link Icon -->
+          <button type="button" onclick="openPlayerWebLink()" class="h-8 rounded-lg flex items-center justify-center text-xs text-emerald-400 hover:text-emerald-300 bg-black/40 border border-emerald-500/20 hover:border-emerald-500/50 transition" title="5-6 Player Web">
+            <i class="fas fa-users-gear"></i>
+          </button>
         </div>
 
         <!-- Logout button -->
@@ -623,27 +787,27 @@
     <div class="flex-1 flex flex-col min-w-0 pb-20 md:pb-8">
       
       <!-- MOBILE COMPACT HEADER -->
-      <header class="md:hidden flex items-center justify-between px-4 py-3 bg-[#090d16]/95 border-b border-white/10 sticky top-0 z-30 backdrop-blur-lg">
-        <div class="flex items-center gap-2.5">
-          <div class="w-9 h-9 rounded-lg p-0.5 bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden">
+      <header class="md:hidden flex items-center justify-between px-3 py-2.5 bg-[#090d16]/95 border-b border-white/10 sticky top-0 z-30 backdrop-blur-lg">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg p-0.5 bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden">
             <img src="https://i.ibb.co.com/yc0vCb3S/file-00000000f7cc8207a918ce7ace9eaf03.png" alt="Logo" class="w-full h-full object-contain rounded-md"
                  onerror="this.onerror=null; this.src='https://cdn.jsdelivr.net/gh/ShahGCreator/icon@main/PNG/909000063.png';">
           </div>
-          <span class="font-black text-lg tracking-wider text-white">MPX <span class="theme-text">PANEL</span></span>
+          <span class="font-black text-base tracking-wider text-white">MPX <span class="theme-text">PANEL</span></span>
         </div>
 
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-1.5">
           <!-- Mobile Sound button -->
-          <button type="button" onclick="toggleSound()" class="w-8 h-8 rounded-lg flex items-center justify-center bg-white/5 border border-white/10 text-xs theme-text" title="Sound">
+          <button type="button" onclick="toggleSound()" class="w-7 h-7 rounded-lg flex items-center justify-center bg-white/5 border border-white/10 text-xs theme-text" title="Sound">
             <i class="fas fa-volume-up" id="mobileSoundIcon"></i>
           </button>
 
           <!-- Mobile Theme button -->
           <div class="relative">
-            <button type="button" onclick="toggleThemeDropdown('mobileThemeMenu')" class="w-8 h-8 rounded-lg flex items-center justify-center bg-white/5 border border-white/10 text-xs theme-text" title="Theme">
+            <button type="button" onclick="toggleThemeDropdown('mobileThemeMenu')" class="w-7 h-7 rounded-lg flex items-center justify-center bg-white/5 border border-white/10 text-xs theme-text" title="Theme">
               <i class="fas fa-palette"></i>
             </button>
-            <div id="mobileThemeMenu" class="hidden absolute top-10 right-0 p-3 glass-card bg-gray-900/98 border border-white/20 rounded-xl shadow-2xl grid grid-cols-4 gap-2 z-50 w-44">
+            <div id="mobileThemeMenu" class="hidden absolute top-9 right-0 p-3 glass-card bg-gray-900/98 border border-white/20 rounded-xl shadow-2xl grid grid-cols-4 gap-2 z-50 w-44">
               <button type="button" onclick="setTheme('yellow')" class="w-8 h-8 rounded-full bg-yellow-500 border border-white/30"></button>
               <button type="button" onclick="setTheme('blue')" class="w-8 h-8 rounded-full bg-blue-500 border border-white/30"></button>
               <button type="button" onclick="setTheme('green')" class="w-8 h-8 rounded-full bg-green-500 border border-white/30"></button>
@@ -655,8 +819,24 @@
             </div>
           </div>
 
+          <!-- Mobile Bell Notice Icon -->
+          <button type="button" onclick="openNoticeHubModal()" class="relative w-7 h-7 rounded-lg flex items-center justify-center bg-white/5 border border-amber-500/30 text-xs text-amber-400" title="Notice Center">
+            <i class="fas fa-bell"></i>
+            <span id="noticeBadgeMobile" class="hidden absolute -top-1 -right-1 min-w-[14px] h-3.5 px-0.5 rounded-full bg-red-600 text-[8px] font-black text-white flex items-center justify-center animate-pulse">0</span>
+          </button>
+
+          <!-- Mobile Website Icon -->
+          <button type="button" onclick="openWebsiteLink()" class="w-7 h-7 rounded-lg flex items-center justify-center bg-white/5 border border-sky-500/30 text-xs text-sky-400" title="Official Website">
+            <i class="fas fa-globe"></i>
+          </button>
+
+          <!-- Mobile 5-6 Player Web Icon -->
+          <button type="button" onclick="openPlayerWebLink()" class="w-7 h-7 rounded-lg flex items-center justify-center bg-white/5 border border-emerald-500/30 text-xs text-emerald-400" title="5-6 Player Web">
+            <i class="fas fa-users-gear"></i>
+          </button>
+
           <!-- Mobile Logout button -->
-          <button type="button" onclick="logout()" class="w-8 h-8 rounded-lg flex items-center justify-center bg-red-500/10 border border-red-500/20 text-xs text-red-400" title="Logout">
+          <button type="button" onclick="logout()" class="w-7 h-7 rounded-lg flex items-center justify-center bg-red-500/10 border border-red-500/20 text-xs text-red-400" title="Logout">
             <i class="fas fa-sign-out-alt"></i>
           </button>
         </div>
@@ -804,9 +984,12 @@
               </div>
             </div>
 
-            <!-- STRICT CATEGORY PILLS (ONLY ALL, EVO, OLD, RARE) -->
+            <!-- CATEGORY PILLS (ALL, FAVORITE, EVO, OLD, RARE) -->
             <div class="flex items-center gap-2 overflow-x-auto pb-1" id="categoryPillGroup">
               <button type="button" onclick="setCategory('ALL')" class="cat-pill active" id="cat-ALL">ALL</button>
+              <button type="button" onclick="setCategory('FAVORITE')" class="cat-pill" id="cat-FAVORITE">
+                <i class="fas fa-star text-amber-400 mr-1"></i>FAVORITE
+              </button>
               <button type="button" onclick="setCategory('EVO')" class="cat-pill" id="cat-EVO">EVO</button>
               <button type="button" onclick="setCategory('OLD')" class="cat-pill" id="cat-OLD">OLD</button>
               <button type="button" onclick="setCategory('RARE')" class="cat-pill" id="cat-RARE">RARE</button>
@@ -827,92 +1010,149 @@
 
         </div>
 
-        <!-- ==================== TAB 3: PROFILE ==================== -->
-        <div id="tab-profile" class="tab-content space-y-5">
+        <!-- ==================== TAB 3: PROFILE (PREMIUM REDESIGN) ==================== -->
+        <div id="tab-profile" class="tab-content space-y-6">
           
-          <!-- User Profile Identity Card -->
-          <div class="glass-card p-6 flex flex-col sm:flex-row items-center gap-5 border border-white/10 text-center sm:text-left">
-            <div class="w-20 h-20 rounded-2xl bg-gradient-to-tr from-yellow-500/30 to-amber-600/30 border-2 border-[var(--primary)] flex items-center justify-center text-3xl theme-text shadow-lg">
-              <i class="fas fa-user-shield"></i>
-            </div>
-            <div class="flex-1 space-y-1">
-              <div class="flex flex-col sm:flex-row sm:items-center gap-2">
-                <h3 class="font-extrabold text-2xl text-white" id="profileUsername">Player</h3>
-                <span id="profileRoleBadge" class="text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 self-center sm:self-auto">Active User</span>
+          <!-- Cyber Hero Profile Card -->
+          <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#121929] via-[#0d1320] to-[#070a10] border border-white/15 p-6 shadow-2xl">
+            <!-- Neon Ambient Glow -->
+            <div class="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-[var(--primary)] opacity-15 blur-3xl pointer-events-none"></div>
+            <div class="absolute -bottom-16 -left-16 w-48 h-48 rounded-full bg-blue-500 opacity-10 blur-3xl pointer-events-none"></div>
+
+            <div class="relative z-10 flex flex-col sm:flex-row items-center sm:items-start gap-5 text-center sm:text-left">
+              <!-- Avatar with Ring -->
+              <div class="relative">
+                <div class="w-24 h-24 rounded-2xl bg-gradient-to-tr from-amber-500/20 to-yellow-400/30 border-2 border-[var(--primary)] flex items-center justify-center text-4xl theme-text shadow-xl ring-4 ring-black/50">
+                  <i class="fas fa-user-ninja"></i>
+                </div>
+                <!-- Status Dot -->
+                <span class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 border-2 border-[#0d1320] flex items-center justify-center text-[9px] text-black font-bold">
+                  <i class="fas fa-check"></i>
+                </span>
               </div>
-              <p class="text-xs text-gray-400">Device ID: <span id="profileDeviceId" class="font-mono text-gray-300">...</span></p>
+
+              <!-- Profile Details -->
+              <div class="flex-1 space-y-2">
+                <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
+                  <h3 class="font-black text-2xl text-white tracking-wide" id="profileUsername">Player</h3>
+                  <span id="profileRoleBadge" class="text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full bg-gradient-to-r from-emerald-500/20 to-teal-500/20 text-emerald-400 border border-emerald-500/30 shadow-sm">
+                    ● ACTIVE VIP
+                  </span>
+                </div>
+                <p class="text-xs text-gray-400 flex items-center justify-center sm:justify-start gap-2">
+                  <i class="fas fa-microchip text-gray-500"></i>
+                  <span>Hardware Device:</span>
+                  <span id="profileDeviceId" class="font-mono text-gray-300 text-[11px] bg-black/40 px-2 py-0.5 rounded border border-white/5 truncate max-w-[200px]">...</span>
+                </p>
+                <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-1 text-[11px]">
+                  <span class="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-gray-300 flex items-center gap-1.5">
+                    <i class="fas fa-shield-alt theme-text"></i> Strict Device Lock Active
+                  </span>
+                  <span class="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 flex items-center gap-1.5">
+                    <i class="fas fa-bolt"></i> Realtime Verified
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 
-          <!-- Key & Device Information -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <!-- Key Details -->
-            <div class="glass-card p-5 space-y-2">
-              <div class="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2">
-                <i class="fas fa-key theme-text"></i> Access Key Info
+          <!-- Quick Actions & Key Status Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            
+            <!-- Access Key Info Card with One-Tap Copy -->
+            <div class="glass-card p-5 space-y-3 border border-white/10 relative overflow-hidden">
+              <div class="flex items-center justify-between">
+                <div class="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2">
+                  <i class="fas fa-key theme-text"></i> My Access Key
+                </div>
+                <button type="button" onclick="copyAccessKey()" class="text-xs font-bold px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-gray-200 hover:text-white transition flex items-center gap-1.5">
+                  <i class="fas fa-copy theme-text" id="copyKeyIcon"></i>
+                  <span id="copyKeyText">Copy Key</span>
+                </button>
               </div>
-              <div id="profileKeyDisplay" class="text-sm font-semibold text-white font-mono break-all bg-black/40 p-3 rounded-xl border border-white/5">
+
+              <div id="profileKeyDisplay" class="text-sm font-bold text-white font-mono break-all bg-black/60 p-3.5 rounded-xl border border-white/10 tracking-wider">
                 Loading...
               </div>
+              <p class="text-[11px] text-gray-400 flex items-center gap-1.5">
+                <i class="fas fa-lock text-gray-500"></i> Locked to this authorized device only.
+              </p>
             </div>
 
-            <!-- Device Limit Status -->
-            <div class="glass-card p-5 space-y-2">
-              <div class="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2">
-                <i class="fas fa-mobile-alt theme-text"></i> Device Slot Usage
+            <!-- Device Slot Usage Card -->
+            <div class="glass-card p-5 space-y-3 border border-white/10 relative overflow-hidden">
+              <div class="flex items-center justify-between">
+                <div class="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2">
+                  <i class="fas fa-mobile-screen-button theme-text"></i> Device Slot Status
+                </div>
+                <span class="text-[10px] uppercase font-black px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">Single Device Policy</span>
               </div>
-              <div id="profileDeviceUsage" class="text-sm font-semibold text-white bg-black/40 p-3 rounded-xl border border-white/5 flex items-center justify-between">
-                <span>Registered Devices:</span>
-                <span id="profileDeviceSlot" class="theme-text font-bold">1 / 1</span>
+
+              <div class="bg-black/60 p-3.5 rounded-xl border border-white/10 flex items-center justify-between">
+                <span class="text-xs text-gray-300">Slots Utilized:</span>
+                <span id="profileDeviceSlot" class="theme-text font-black text-base">1 / 1</span>
               </div>
+              <p class="text-[11px] text-gray-400 flex items-center gap-1.5">
+                <i class="fas fa-circle-info text-amber-400"></i> Sharing or using on multiple devices is strictly disabled.
+              </p>
             </div>
+
           </div>
 
-          <!-- Countdown Timer Display -->
-          <div class="glass-card p-6 text-center space-y-4">
-            <div class="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center justify-center gap-2">
-              <i class="fas fa-hourglass-half theme-text"></i> Access Validity Countdown
+          <!-- Live Validity Countdown Display -->
+          <div class="glass-card p-6 text-center space-y-4 border border-white/10 relative overflow-hidden">
+            <div class="text-xs font-black uppercase tracking-widest text-gray-400 flex items-center justify-center gap-2">
+              <i class="fas fa-hourglass-start theme-text animate-pulse"></i> Access Validity Countdown
             </div>
 
-            <div id="countdownContainer" class="grid grid-cols-3 gap-3 max-w-md mx-auto">
-              <div class="bg-black/50 border border-white/10 p-3.5 rounded-2xl">
-                <div id="countdownDays" class="text-2xl sm:text-3xl font-black text-white">00</div>
-                <div class="text-[10px] uppercase font-bold text-gray-400 mt-1">Days</div>
+            <div id="countdownContainer" class="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-xl mx-auto">
+              <div class="bg-black/60 border border-white/10 p-4 rounded-2xl shadow-inner">
+                <div id="countdownDays" class="text-3xl sm:text-4xl font-black text-white">00</div>
+                <div class="text-[10px] uppercase font-black tracking-wider text-gray-400 mt-1">Days</div>
               </div>
-              <div class="bg-black/50 border border-white/10 p-3.5 rounded-2xl">
-                <div id="countdownHours" class="text-2xl sm:text-3xl font-black text-white">00</div>
-                <div class="text-[10px] uppercase font-bold text-gray-400 mt-1">Hours</div>
+              <div class="bg-black/60 border border-white/10 p-4 rounded-2xl shadow-inner">
+                <div id="countdownHours" class="text-3xl sm:text-4xl font-black text-white">00</div>
+                <div class="text-[10px] uppercase font-black tracking-wider text-gray-400 mt-1">Hours</div>
               </div>
-              <div class="bg-black/50 border border-white/10 p-3.5 rounded-2xl">
-                <div id="countdownMinutes" class="text-2xl sm:text-3xl font-black text-white">00</div>
-                <div class="text-[10px] uppercase font-bold text-gray-400 mt-1">Minutes</div>
+              <div class="bg-black/60 border border-white/10 p-4 rounded-2xl shadow-inner">
+                <div id="countdownMinutes" class="text-3xl sm:text-4xl font-black text-white">00</div>
+                <div class="text-[10px] uppercase font-black tracking-wider text-gray-400 mt-1">Minutes</div>
+              </div>
+              <div class="bg-black/60 border border-white/10 p-4 rounded-2xl shadow-inner">
+                <div id="countdownSeconds" class="text-3xl sm:text-4xl font-black theme-text">00</div>
+                <div class="text-[10px] uppercase font-black tracking-wider text-gray-400 mt-1">Seconds</div>
               </div>
             </div>
+
             <div id="masterUnlimitedBanner" class="hidden py-4 text-center">
-              <span class="text-lg font-black theme-text tracking-widest px-6 py-2 rounded-xl bg-white/5 border border-white/10">
-                ⭐ UNLIMITED MASTER ACCESS ⭐
+              <span class="text-lg font-black theme-text tracking-widest px-6 py-2.5 rounded-2xl bg-white/5 border border-white/10 shadow-xl inline-flex items-center gap-2">
+                <i class="fas fa-crown text-amber-400"></i> UNLIMITED MASTER ACCESS <i class="fas fa-crown text-amber-400"></i>
               </span>
             </div>
+
+            <p class="text-[11px] text-gray-500">
+              Auto-refreshes in real-time. Contact admin to extend validity.
+            </p>
           </div>
 
-          <!-- Official Support Section -->
+          <!-- Official Support & Communication Center -->
           <div class="glass-card p-6 space-y-4 border border-white/10">
             <h4 class="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2">
-              <i class="fas fa-headset theme-text"></i> Support & Verification
+              <i class="fas fa-headset theme-text"></i> Official Support & Verification
             </h4>
 
-            <div class="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-xs font-bold text-red-400 flex items-center gap-2.5">
-              <i class="fas fa-exclamation-triangle text-base"></i>
-              <span>⚠️ DO NOT CALL. MESSAGE ONLY.</span>
+            <div class="p-3.5 bg-red-500/10 border border-red-500/30 rounded-xl text-xs font-black text-red-400 flex items-center gap-3">
+              <i class="fas fa-phone-slash text-lg"></i>
+              <span>⚠️ STRICT NOTICE: DO NOT CALL. SEND TEXT MESSAGE ONLY.</span>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <a href="https://wa.me/+8801858370922" target="_blank" rel="noopener noreferrer" class="flex items-center justify-center gap-2.5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-lg transition">
-                <i class="fab fa-whatsapp text-lg"></i>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <a id="profileWhatsappBtn" href="https://wa.me/+8801858370922" target="_blank" rel="noopener noreferrer" class="flex items-center justify-center gap-2.5 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm shadow-lg transition transform hover:-translate-y-0.5">
+                <i class="fab fa-whatsapp text-xl"></i>
                 <span>WhatsApp Support</span>
               </a>
-              <a href="https://t.me/FFH_PIYASH" target="_blank" rel="noopener noreferrer" class="flex items-center justify-center gap-2.5 py-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-sm shadow-lg transition">
-                <i class="fab fa-telegram-plane text-lg"></i>
+              <a id="profileTelegramBtn" href="https://t.me/FFH_PIYASH" target="_blank" rel="noopener noreferrer" class="flex items-center justify-center gap-2.5 py-3.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-black text-sm shadow-lg transition transform hover:-translate-y-0.5">
+                <i class="fab fa-telegram-plane text-xl"></i>
                 <span>Telegram Channel</span>
               </a>
             </div>
@@ -1201,6 +1441,20 @@
       return new Date(ts);
     }
 
+    function formatDate(val) {
+      if (!val) return "N/A";
+      const d = timestampToDate(val);
+      if (!d || isNaN(d.getTime())) return "N/A";
+      return d.toLocaleString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+    }
+
     // ==========================================
     // 8. ROBUST INPUT CONTROLS: CLEAR & PASTE
     // ==========================================
@@ -1254,8 +1508,24 @@
     };
 
     // ==========================================
-    // 9. DYNAMIC UID RENDERING
+    // 9. DYNAMIC UID RENDERING (1 to 6 Boxes Based on BOT API Config)
     // ==========================================
+    window.updateDynamicUidBoxes = function() {
+      let boxCount = 6;
+      if (selectedBot && selectedBot.uid_boxes !== undefined && selectedBot.uid_boxes !== null) {
+        boxCount = parseInt(selectedBot.uid_boxes, 10);
+      }
+      boxCount = Math.max(1, Math.min(6, isNaN(boxCount) ? 6 : boxCount));
+
+      // Build active UID fields array of length boxCount
+      const fields = [];
+      for (let i = 1; i <= boxCount; i++) {
+        fields.push(`uid${i}`);
+      }
+      uidFields = fields;
+      renderDynamicUidFields(boxCount);
+    };
+
     async function loadConfig() {
       try {
         const res = await fetch("/api/config");
@@ -1266,34 +1536,39 @@
           }
         }
       } catch (e) {
-        console.warn("Could not fetch /api/config, using default 6 UID fields.", e);
-        uidFields = ["uid1", "uid2", "uid3", "uid4", "uid5", "uid6"];
+        console.warn("Could not fetch /api/config, using default UID fields.", e);
       }
-      renderDynamicUidFields();
+      window.updateDynamicUidBoxes();
     }
 
-    function renderDynamicUidFields() {
+    function renderDynamicUidFields(count) {
       const container = document.getElementById("dynamicUidContainer");
       if (!container) return;
 
-      // Preserve existing values if already typed
+      const numBoxes = count || (uidFields ? uidFields.length : 6) || 6;
+
+      // Preserve existing values if user already entered anything
       const savedValues = {};
-      uidFields.forEach(id => {
-        const existing = document.getElementById(id);
-        if (existing) savedValues[id] = existing.value;
-      });
+      for (let i = 1; i <= 6; i++) {
+        const existing = document.getElementById(`uid${i}`);
+        if (existing) savedValues[`uid${i}`] = existing.value;
+      }
 
       container.innerHTML = `
-        <div class="p-2.5 rounded-xl bg-white/5 border border-white/10 mb-2">
+        <div class="p-2.5 rounded-xl bg-white/5 border border-white/10 mb-2 flex items-center justify-between">
           <p class="text-[11px] text-gray-300 font-medium">
             <i class="fas fa-info-circle text-[var(--primary)] mr-1"></i>
-            Enter UID in any box (Box 1 to 6). At least one UID is required.
+            Enter UID in any box (${numBoxes === 1 ? 'Box 1' : 'Box 1 to ' + numBoxes}). At least 1 UID required.
           </p>
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-white/5 text-[var(--primary)] border border-white/10">
+            ${numBoxes} ${numBoxes === 1 ? 'BOX' : 'BOXES'}
+          </span>
         </div>
       `;
 
-      uidFields.forEach((id, index) => {
-        const num = id.replace("uid", "").toUpperCase();
+      for (let i = 1; i <= numBoxes; i++) {
+        const id = `uid${i}`;
+        const num = i;
         const val = savedValues[id] || "";
 
         const wrapper = document.createElement("div");
@@ -1333,7 +1608,7 @@
           </div>
         `;
         container.appendChild(wrapper);
-      });
+      }
     }
 
     // ==========================================
@@ -1480,30 +1755,87 @@
     };
 
     // ==========================================
-    // 12. EMOTE RENDERING & INSTANT SEND ON CLICK
+    // 12. FAVORITE EMOTES & EMOTE RENDERING
     // ==========================================
+    window.getFavoriteEmoteIds = function() {
+      try {
+        const saved = localStorage.getItem("mpx_favorite_emotes");
+        return saved ? JSON.parse(saved) : [];
+      } catch (e) {
+        return [];
+      }
+    };
+
+    window.toggleFavoriteEmote = function(emoteId, e) {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      let favs = window.getFavoriteEmoteIds();
+      const strId = String(emoteId);
+      const idx = favs.indexOf(strId);
+      if (idx >= 0) {
+        favs.splice(idx, 1);
+        window.showToast("Removed from favorites.", "info");
+      } else {
+        favs.push(strId);
+        window.showToast("Added to favorites! ⭐", "success");
+      }
+      localStorage.setItem("mpx_favorite_emotes", JSON.stringify(favs));
+      window.playClickSound();
+      renderEmotes();
+    };
+
     function renderEmotes() {
       const fullGrid = document.getElementById("fullEmoteGrid");
       const quickGrid = document.getElementById("quickEmotesGrid");
       const emptyState = document.getElementById("noEmotesFoundState");
       const searchInput = document.getElementById("emoteSearchInput");
+      const countBadge = document.getElementById("emoteCountBadge");
 
       const queryTerm = searchInput ? searchInput.value.trim().toLowerCase() : "";
+      const favList = window.getFavoriteEmoteIds();
 
-      // Filter emotes with partial matching
+      // Filter emotes with category and search query matching
       const filtered = allEmotes.filter(emote => {
-        const matchCategory = selectedCategory === "ALL" || emote.category.toUpperCase() === selectedCategory.toUpperCase();
+        let matchCategory = true;
+        if (selectedCategory === "FAVORITE") {
+          matchCategory = favList.includes(String(emote.id));
+        } else if (selectedCategory !== "ALL") {
+          matchCategory = emote.category.toUpperCase() === selectedCategory.toUpperCase();
+        }
+
         const matchSearch = !queryTerm ||
           emote.name.toLowerCase().includes(queryTerm) ||
-          emote.id.toLowerCase().includes(queryTerm);
+          String(emote.id).toLowerCase().includes(queryTerm);
+
         return matchCategory && matchSearch;
       });
+
+      // Fix emote count display dynamically
+      if (countBadge) {
+        if (selectedCategory === "FAVORITE") {
+          countBadge.innerText = `${filtered.length} Favorites (${allEmotes.length} Total)`;
+        } else if (queryTerm) {
+          countBadge.innerText = `${filtered.length} / ${allEmotes.length} Emotes`;
+        } else {
+          countBadge.innerText = `${allEmotes.length} Emotes`;
+        }
+      }
 
       // Update Full Emote Grid
       if (fullGrid) {
         fullGrid.innerHTML = "";
         if (filtered.length === 0) {
-          if (emptyState) emptyState.classList.remove("hidden");
+          if (emptyState) {
+            emptyState.classList.remove("hidden");
+            const subtext = emptyState.querySelector("p.text-xs");
+            if (subtext) {
+              subtext.innerText = selectedCategory === "FAVORITE"
+                ? "Click the star icon (⭐) on any emote to add it to your favorites."
+                : "Try another keyword or select the 'ALL' category.";
+            }
+          }
         } else {
           if (emptyState) emptyState.classList.add("hidden");
           filtered.forEach(emote => {
@@ -1529,13 +1861,21 @@
     function createEmoteCardElement(emote, isQuick) {
       const card = document.createElement("div");
       const isSelected = emote.id === selectedEmote;
-      card.className = `emote-card ${isSelected ? 'selected' : ''}`;
+      card.className = `emote-card relative ${isSelected ? 'selected' : ''}`;
       card.dataset.emoteId = emote.id;
 
       const imgUrl = emote.image_url || `https://cdn.jsdelivr.net/gh/ShahGCreator/icon@main/PNG/${emote.id}.png`;
+      const favList = window.getFavoriteEmoteIds();
+      const isFav = favList.includes(String(emote.id));
 
       card.innerHTML = `
         <div class="selected-badge"><i class="fas fa-check"></i></div>
+        <button type="button"
+                class="favorite-star-btn absolute top-2 right-2 w-7 h-7 rounded-lg flex items-center justify-center text-xs z-10 transition-all ${isFav ? 'bg-amber-500/30 text-amber-400 border border-amber-500/50 shadow-sm' : 'bg-black/50 text-gray-400 hover:text-amber-300 border border-white/10'}"
+                onclick="window.toggleFavoriteEmote('${emote.id}', event)"
+                title="${isFav ? 'Remove Favorite' : 'Add to Favorites'}">
+          <i class="${isFav ? 'fas fa-star' : 'far fa-star'}"></i>
+        </button>
         <div class="${isQuick ? 'w-12 h-12' : 'w-16 h-16'} rounded-xl bg-black/40 p-1 flex items-center justify-center mb-2 overflow-hidden border border-white/5">
           <img src="${imgUrl}" alt="${emote.name}" class="w-full h-full object-contain pointer-events-none"
                onerror="this.onerror=null; this.src='https://cdn.jsdelivr.net/gh/ShahGCreator/icon@main/PNG/909000063.png';">
@@ -1546,6 +1886,8 @@
       `;
 
       card.onclick = async (e) => {
+        // Prevent trigger if star button was clicked
+        if (e.target.closest(".favorite-star-btn")) return;
         e.preventDefault();
         window.playClickSound();
         selectedEmote = emote.id;
@@ -1575,13 +1917,13 @@
 
     window.setCategory = function(cat) {
       selectedCategory = cat;
-      ["ALL", "EVO", "OLD", "RARE"].forEach(c => {
-        const btn = document.getElementById(`cat-${c}`);
-        if (btn) {
-          if (c === cat) btn.classList.add("active");
+      const pillGroup = document.getElementById("categoryPillGroup");
+      if (pillGroup) {
+        pillGroup.querySelectorAll(".cat-pill").forEach(btn => {
+          if (btn.id === `cat-${cat}`) btn.classList.add("active");
           else btn.classList.remove("active");
-        }
-      });
+        });
+      }
       window.playClickSound();
       renderEmotes();
     };
@@ -1683,10 +2025,15 @@
         // Restore previously selected bot if valid for this region, otherwise select first
         if (selectedBot && matchingBots.some(b => b.id === selectedBot.id)) {
           botSelect.value = selectedBot.id;
+          selectedBot = matchingBots.find(b => b.id === selectedBot.id) || matchingBots[0];
         } else {
           selectedBot = matchingBots[0];
           botSelect.value = selectedBot.id;
         }
+      }
+      // Dynamically render the configured UID input boxes for this bot
+      if (typeof window.updateDynamicUidBoxes === "function") {
+        window.updateDynamicUidBoxes();
       }
     }
 
@@ -1769,15 +2116,15 @@
       try {
         const catsRef = collection(db, "categories");
         onSnapshot(catsRef, (snap) => {
-          const cats = ["ALL"];
+          const cats = ["ALL", "FAVORITE"];
           snap.forEach(docSnap => {
             const name = (docSnap.id || docSnap.data().name || "").toUpperCase();
-            if (name && name !== "ALL" && !cats.includes(name)) {
+            if (name && !cats.includes(name)) {
               cats.push(name);
             }
           });
 
-          if (cats.length === 1) {
+          if (cats.length <= 2) {
             cats.push("EVO", "OLD", "RARE", "POPULAR", "SPECIAL");
           }
 
@@ -1787,7 +2134,11 @@
             btn.type = "button";
             btn.className = `cat-pill ${c === selectedCategory ? 'active' : ''}`;
             btn.id = `cat-${c}`;
-            btn.innerText = c;
+            if (c === "FAVORITE") {
+              btn.innerHTML = `<i class="fas fa-star text-amber-400 mr-1"></i>FAVORITE`;
+            } else {
+              btn.innerText = c;
+            }
             btn.onclick = () => window.setCategory(c);
             catGroup.appendChild(btn);
           });
@@ -1805,6 +2156,9 @@
       const botId = select.value;
       selectedBot = allConfiguredBots.find(b => b.id === botId) || null;
       window.playClickSound();
+      if (typeof window.updateDynamicUidBoxes === "function") {
+        window.updateDynamicUidBoxes();
+      }
     };
 
     window.handleRegionChange = function() {
@@ -1812,43 +2166,318 @@
       updateBotsDropdownForRegion();
     };
 
-    function setupNoticesListener() {
-      const container = document.getElementById("noticesArea");
-      if (!container) return;
+    let noticeRedirectTimer = null;
+    let noticeRemainingSec = 10;
+    let activeNoticesList = [];
 
+    function checkAndShowNoticeModal(notices) {
+      if (!notices || notices.length === 0) return;
+      if (!currentUserSession) return;
+
+      const modal = document.getElementById("noticeModal");
+      const modalBody = document.getElementById("noticeModalBody");
+      const timerSec = document.getElementById("noticeTimerSec");
+      if (!modal || !modalBody) return;
+
+      // Unique identifier for this notice batch
+      const noticeKey = notices.map(n => n.id || n.message).join("_");
+      const alreadySeen = sessionStorage.getItem("mpx_notice_seen_" + noticeKey);
+      if (alreadySeen) return;
+
+      modalBody.innerHTML = "";
+      notices.forEach(n => {
+        const item = document.createElement("div");
+        item.className = "p-3.5 rounded-xl bg-white/5 border border-white/10 mb-2.5 last:mb-0";
+        item.innerHTML = `
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30">
+              ${n.target_username ? (n.target_username === 'ALL' ? 'BROADCAST NOTICE' : n.target_username) : 'ANNOUNCEMENT'}
+            </span>
+            ${n.created_at ? `<span class="text-[10px] text-gray-400 font-mono">${formatDate(n.created_at)}</span>` : ''}
+          </div>
+          <p class="text-xs text-gray-200 leading-relaxed font-medium">${n.message || ""}</p>
+        `;
+        modalBody.appendChild(item);
+      });
+
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+      window.playSuccessSound();
+
+      if (noticeRedirectTimer) clearInterval(noticeRedirectTimer);
+      noticeRemainingSec = 10;
+      if (timerSec) timerSec.innerText = noticeRemainingSec;
+
+      noticeRedirectTimer = setInterval(() => {
+        noticeRemainingSec--;
+        if (timerSec) timerSec.innerText = noticeRemainingSec;
+        if (noticeRemainingSec <= 0) {
+          clearInterval(noticeRedirectTimer);
+          noticeRedirectTimer = null;
+          window.closeNoticeAndGoToProfile();
+        }
+      }, 1000);
+    }
+
+    window.closeNoticeAndGoToProfile = function() {
+      if (noticeRedirectTimer) {
+        clearInterval(noticeRedirectTimer);
+        noticeRedirectTimer = null;
+      }
+      const modal = document.getElementById("noticeModal");
+      if (modal) {
+        modal.classList.add("hidden");
+        modal.classList.remove("flex");
+      }
+      if (activeNoticesList && activeNoticesList.length > 0) {
+        const noticeKey = activeNoticesList.map(n => n.id || n.message).join("_");
+        sessionStorage.setItem("mpx_notice_seen_" + noticeKey, "true");
+      }
+      window.openTab("profile");
+      window.playClickSound();
+    };
+
+    let rawNoticesCache = [];
+
+    function processAndFilterNotices() {
+      if (!currentUserSession) return [];
+      const now = Date.now();
+      const list = [];
+
+      rawNoticesCache.forEach(d => {
+        if (d.active !== false) {
+          // Auto-upload / Publish Schedule check
+          if (d.publish_at && now < Number(d.publish_at)) {
+            return; // Not published yet
+          }
+          // Auto-delete / Expiry check
+          if (d.expires_at && now > Number(d.expires_at)) {
+            return; // Expired / Auto-deleted
+          }
+
+          const target = d.target_username || "ALL";
+          if (target === "ALL" || (currentUserSession && target.toLowerCase() === currentUserSession.username.toLowerCase())) {
+            list.push(d);
+          }
+        }
+      });
+
+      list.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+      return list;
+    }
+
+    function refreshNoticesUI() {
+      const container = document.getElementById("noticesArea");
+      const list = processAndFilterNotices();
+      activeNoticesList = list;
+
+      updateNoticeBadges(list.length);
+      renderNoticeHub(list);
+
+      if (list.length > 0) {
+        if (container) {
+          container.innerHTML = "";
+          list.forEach(item => {
+            const nDiv = document.createElement("div");
+            nDiv.className = "p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-200 text-xs flex items-center gap-3";
+            nDiv.innerHTML = `
+              <i class="fas fa-bullhorn text-amber-400 text-base"></i>
+              <span class="flex-1">${item.message || ""}</span>
+            `;
+            container.appendChild(nDiv);
+          });
+          container.classList.remove("hidden");
+        }
+        checkAndShowNoticeModal(list);
+      } else {
+        if (container) container.classList.add("hidden");
+      }
+    }
+
+    function updateNoticeBadges(count) {
+      const dBadge = document.getElementById("noticeBadgeDesktop");
+      const mBadge = document.getElementById("noticeBadgeMobile");
+      const hubBadge = document.getElementById("noticeHubCountBadge");
+
+      if (hubBadge) hubBadge.innerText = `${count} Active`;
+
+      if (count > 0) {
+        const txt = count > 9 ? "9+" : String(count);
+        if (dBadge) {
+          dBadge.innerText = txt;
+          dBadge.classList.remove("hidden");
+        }
+        if (mBadge) {
+          mBadge.innerText = txt;
+          mBadge.classList.remove("hidden");
+        }
+      } else {
+        if (dBadge) dBadge.classList.add("hidden");
+        if (mBadge) mBadge.classList.add("hidden");
+      }
+    }
+
+    function renderNoticeHub(list) {
+      const hubList = document.getElementById("noticeHubList");
+      if (!hubList) return;
+
+      if (!list || list.length === 0) {
+        hubList.innerHTML = `
+          <div class="text-center py-10 text-gray-500 text-xs">
+            <i class="fas fa-bell-slash text-3xl mb-2 block text-gray-600"></i>
+            <span>No active notices at this moment.</span>
+          </div>
+        `;
+        return;
+      }
+
+      hubList.innerHTML = "";
+      list.forEach(n => {
+        const item = document.createElement("div");
+        item.className = "p-4 rounded-xl bg-black/50 border border-white/10 space-y-2";
+
+        let timeText = n.created_at ? formatDate(n.created_at) : "Recent";
+        let expiryBadge = "";
+        if (n.expires_at) {
+          const remainingMs = Number(n.expires_at) - Date.now();
+          if (remainingMs > 0) {
+            const remHours = Math.ceil(remainingMs / (1000 * 60 * 60));
+            expiryBadge = `<span class="text-[10px] text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20"><i class="fas fa-clock mr-1"></i>Expires in ~${remHours}h</span>`;
+          }
+        }
+
+        item.innerHTML = `
+          <div class="flex items-center justify-between">
+            <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30">
+              ${n.target_username ? (n.target_username === 'ALL' ? 'BROADCAST' : 'USER: ' + n.target_username) : 'NOTICE'}
+            </span>
+            <div class="flex items-center gap-2">
+              ${expiryBadge}
+              <span class="text-[10px] text-gray-400 font-mono">${timeText}</span>
+            </div>
+          </div>
+          <p class="text-xs text-gray-200 leading-relaxed font-medium whitespace-pre-line">${n.message || ""}</p>
+        `;
+        hubList.appendChild(item);
+      });
+    }
+
+    window.openNoticeHubModal = function() {
+      window.playClickSound();
+      refreshNoticesUI();
+      const modal = document.getElementById("allNoticesModal");
+      if (modal) {
+        modal.classList.remove("hidden");
+        modal.classList.add("flex");
+      }
+    };
+
+    window.closeNoticeHubModal = function() {
+      window.playClickSound();
+      const modal = document.getElementById("allNoticesModal");
+      if (modal) {
+        modal.classList.add("hidden");
+        modal.classList.remove("flex");
+      }
+    };
+
+    // Website and Player Web links with Coming Soon handling
+    window.websiteLink = "";
+    window.playerWebLink = "";
+
+    window.openWebsiteLink = function() {
+      window.playClickSound();
+      const url = window.websiteLink ? window.websiteLink.trim() : "";
+      if (url && (url.startsWith("http://") || url.startsWith("https://"))) {
+        window.open(url, "_blank");
+      } else {
+        showComingSoonModal("Official Website Portal", "The Official Website Portal is currently being prepared by the administration. Coming Soon!");
+      }
+    };
+
+    window.openPlayerWebLink = function() {
+      window.playClickSound();
+      const url = window.playerWebLink ? window.playerWebLink.trim() : "";
+      if (url && (url.startsWith("http://") || url.startsWith("https://"))) {
+        window.open(url, "_blank");
+      } else {
+        showComingSoonModal("5-6 Player Web Portal", "The 5-6 Player Web platform is currently under active development. Coming Soon!");
+      }
+    };
+
+    function showComingSoonModal(title, desc) {
+      const modal = document.getElementById("comingSoonModal");
+      const tEl = document.getElementById("comingSoonTitle");
+      const dEl = document.getElementById("comingSoonDesc");
+      if (tEl) tEl.innerText = title || "Coming Soon";
+      if (dEl) dEl.innerText = desc || "This feature will be available soon!";
+      if (modal) {
+        modal.classList.remove("hidden");
+        modal.classList.add("flex");
+      }
+    }
+
+    window.closeComingSoonModal = function() {
+      window.playClickSound();
+      const modal = document.getElementById("comingSoonModal");
+      if (modal) {
+        modal.classList.add("hidden");
+        modal.classList.remove("flex");
+      }
+    };
+
+    window.copyAccessKey = function() {
+      const keyEl = document.getElementById("profileKeyDisplay");
+      const icon = document.getElementById("copyKeyIcon");
+      const text = document.getElementById("copyKeyText");
+      const key = currentUserSession ? currentUserSession.key : (keyEl ? keyEl.innerText : "");
+
+      if (!key || key === "Loading..." || key === "Unlimited Access") {
+        window.showToast("No standard key to copy.", "info");
+        return;
+      }
+
+      navigator.clipboard.writeText(key).then(() => {
+        window.playSuccessSound();
+        window.showToast("Access Key copied to clipboard!", "success");
+        if (icon) icon.className = "fas fa-check text-emerald-400";
+        if (text) text.innerText = "Copied!";
+        setTimeout(() => {
+          if (icon) icon.className = "fas fa-copy theme-text";
+          if (text) text.innerText = "Copy Key";
+        }, 2000);
+      }).catch(() => {
+        window.showToast("Copied: " + key, "info");
+      });
+    };
+
+    function setupNoticesListener() {
       try {
         const noticesRef = collection(db, "notices");
         onSnapshot(noticesRef, (snap) => {
-          if (!currentUserSession) return;
-          const list = [];
+          rawNoticesCache = [];
           snap.forEach(docSnap => {
-            const d = docSnap.data();
-            if (d.active) {
-              const target = d.target_username || "ALL";
-              if (target === "ALL" || target === currentUserSession.username) {
-                list.push(d);
-              }
-            }
+            rawNoticesCache.push({ id: docSnap.id, ...docSnap.data() });
           });
-
-          if (list.length > 0) {
-            container.innerHTML = "";
-            list.forEach(item => {
-              const nDiv = document.createElement("div");
-              nDiv.className = "p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-200 text-xs flex items-center gap-3";
-              nDiv.innerHTML = `
-                <i class="fas fa-bullhorn text-amber-400 text-base"></i>
-                <span class="flex-1">${item.message || ""}</span>
-              `;
-              container.appendChild(nDiv);
-            });
-            container.classList.remove("hidden");
-          } else {
-            container.classList.add("hidden");
-          }
+          refreshNoticesUI();
         }, (err) => {
           console.warn("Notices sync error:", err);
+          // Fallback to REST endpoint
+          fetch("/api/notices?username=" + encodeURIComponent(currentUserSession ? currentUserSession.username : ""))
+            .then(res => res.json())
+            .then(data => {
+              if (data && data.success && Array.isArray(data.notices)) {
+                rawNoticesCache = data.notices;
+                refreshNoticesUI();
+              }
+            })
+            .catch(e => console.warn("Fallback notices fetch error:", e));
         });
+
+        // Periodic ticker to handle auto-upload and auto-delete timestamps without requiring manual page reload
+        setInterval(() => {
+          refreshNoticesUI();
+        }, 30000);
       } catch (err) {
         console.warn("Setup notices listener error:", err);
       }
@@ -1864,20 +2493,7 @@
         onSnapshot(docRef, (snap) => {
           if (snap.exists()) {
             const config = snap.data();
-            if (config.app_name) {
-              document.title = config.app_name;
-              const logoTitle = document.getElementById("appLogoTitle");
-              if (logoTitle) logoTitle.innerText = config.app_name;
-            }
-            if (config.maintenance_mode && (!currentUserSession || !currentUserSession.isMaster)) {
-              showMaintenanceScreen();
-            } else {
-              const ms = document.getElementById("maintenanceScreen");
-              if (ms) ms.classList.add("hidden");
-            }
-            if (config.embed_url) {
-              setupEmbedUrl(config.embed_url);
-            }
+            applySystemConfig(config);
           }
         }, (err) => {
           console.warn("Settings sync error:", err);
@@ -1885,6 +2501,36 @@
       } catch (err) {
         console.warn("Setup settings listener error:", err);
       }
+    }
+
+    function applySystemConfig(config) {
+      if (!config) return;
+
+      if (config.app_name) {
+        document.title = config.app_name;
+        const logoTitle = document.getElementById("appLogoTitle");
+        if (logoTitle) logoTitle.innerText = config.app_name;
+      }
+      if (config.maintenance_mode && (!currentUserSession || !currentUserSession.isMaster)) {
+        showMaintenanceScreen();
+      } else {
+        const ms = document.getElementById("maintenanceScreen");
+        if (ms) ms.classList.add("hidden");
+      }
+      if (config.embed_url) {
+        setupEmbedUrl(config.embed_url);
+      }
+
+      // Update external links
+      window.websiteLink = config.website_link || "";
+      window.playerWebLink = config.player_web_link || "";
+      const waLink = config.whatsapp_link || "https://wa.me/+8801858370922";
+      const tgLink = config.telegram_link || "https://t.me/FFH_PIYASH";
+
+      const waBtn = document.getElementById("profileWhatsappBtn");
+      if (waBtn) waBtn.href = waLink;
+      const tgBtn = document.getElementById("profileTelegramBtn");
+      if (tgBtn) tgBtn.href = tgLink;
     }
 
     async function loadSettings() {
@@ -1959,12 +2605,6 @@
 
       const key = keyField ? keyField.value.trim() : "";
 
-      if (!username) {
-        window.showToast("Username is required.", "warning");
-        window.playWarningSound();
-        if (userField) userField.focus();
-        return;
-      }
       if (!key) {
         window.showToast("Access Key is required.", "warning");
         window.playWarningSound();
@@ -1985,7 +2625,7 @@
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            username: username,
+            username: username || "Player",
             key: key,
             device_id: deviceId
           })
@@ -1995,14 +2635,15 @@
 
         // Handle Master Key authentication
         if (authRes.ok && authData.is_master === true) {
+          const finalUsername = username || "Master";
           currentUserSession = {
-            username: username,
+            username: finalUsername,
             key: key,
             loginTime: Date.now(),
             isMaster: true
           };
           localStorage.setItem("mpx_user_session", JSON.stringify(currentUserSession));
-          localStorage.setItem("mpx_saved_username", username);
+          localStorage.setItem("mpx_saved_username", finalUsername);
           window.playSuccessSound();
           window.showToast("Master Access Granted!", "success");
           enterApp();
@@ -2024,7 +2665,9 @@
         }
 
         // Username binding check if existing
-        if (data.username && data.username.trim() !== "") {
+        if (!username) {
+          username = (data.username && data.username.trim() !== "") ? data.username : "Player";
+        } else if (data.username && data.username.trim() !== "") {
           if (data.username.trim().toLowerCase() !== username.toLowerCase()) {
             throw new Error(`Username does not match key owner (${data.username}).`);
           }
@@ -2174,6 +2817,7 @@
     }
 
     function enterApp() {
+      document.documentElement.classList.add("mpx-session-active");
       const loginScreen = document.getElementById("loginScreen");
       const mainApp = document.getElementById("mainApp");
 
@@ -2186,7 +2830,61 @@
       renderEmotes();
     }
 
+    // ==========================================
+    // LOGOUT CONFIRMATION WITH PASSWORD/KEY ONLY
+    // ==========================================
     window.logout = function() {
+      const modal = document.getElementById("logoutModal");
+      const passInput = document.getElementById("logoutPasswordInput");
+      if (modal) {
+        if (passInput) {
+          passInput.value = "";
+          setTimeout(() => passInput.focus(), 100);
+        }
+        modal.classList.remove("hidden");
+        modal.classList.add("flex");
+        window.playClickSound();
+      } else {
+        performLogout();
+      }
+    };
+
+    window.closeLogoutModal = function() {
+      const modal = document.getElementById("logoutModal");
+      if (modal) {
+        modal.classList.add("hidden");
+        modal.classList.remove("flex");
+      }
+      window.playClickSound();
+    };
+
+    window.handleConfirmLogout = function(e) {
+      if (e) e.preventDefault();
+      const passInput = document.getElementById("logoutPasswordInput");
+      const entered = passInput ? passInput.value.trim() : "";
+
+      if (!entered) {
+        window.showToast("Password or Access Key is required to logout.", "warning");
+        window.playWarningSound();
+        if (passInput) passInput.focus();
+        return;
+      }
+
+      // Check against current key, master passwords
+      const sessionKey = currentUserSession ? currentUserSession.key : "";
+      const isMatch = (sessionKey && entered === sessionKey) || entered === "admin" || entered === "1234";
+
+      if (!isMatch) {
+        window.showToast("Incorrect password. Logout cancelled.", "error");
+        window.playErrorSound();
+        return;
+      }
+
+      window.closeLogoutModal();
+      performLogout();
+    };
+
+    function performLogout() {
       if (countdownInterval) {
         clearInterval(countdownInterval);
         countdownInterval = null;
@@ -2195,6 +2893,7 @@
       currentUserSession = null;
       currentKeyData = null;
       localStorage.removeItem("mpx_user_session");
+      document.documentElement.classList.remove("mpx-session-active");
 
       const loginScreen = document.getElementById("loginScreen");
       const mainApp = document.getElementById("mainApp");
@@ -2202,12 +2901,9 @@
       if (mainApp) mainApp.classList.add("hidden");
       if (loginScreen) loginScreen.classList.remove("hidden");
 
-      // Set returning user mode for same device
-      switchLoginMode(false);
-
       window.playClickSound();
       window.showToast("Logged out successfully.", "info");
-    };
+    }
 
     function startCountdownTimer() {
       if (countdownInterval) clearInterval(countdownInterval);
@@ -2221,6 +2917,7 @@
       const cDays = document.getElementById("countdownDays");
       const cHours = document.getElementById("countdownHours");
       const cMins = document.getElementById("countdownMinutes");
+      const cSecs = document.getElementById("countdownSeconds");
       const cContainer = document.getElementById("countdownContainer");
       const masterBanner = document.getElementById("masterUnlimitedBanner");
 
@@ -2248,24 +2945,28 @@
         if (cDays) cDays.innerText = "00";
         if (cHours) cHours.innerText = "00";
         if (cMins) cMins.innerText = "00";
+        if (cSecs) cSecs.innerText = "00";
         clearInterval(countdownInterval);
         window.showToast("Your access key has expired.", "error");
-        logout();
+        performLogout();
         return;
       }
 
       const days = Math.floor(diff / (1000 * 60 * 60 * 24));
       const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
       const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
 
       const strDays = String(days).padStart(2, "0");
       const strHours = String(hours).padStart(2, "0");
       const strMins = String(minutes).padStart(2, "0");
+      const strSecs = String(seconds).padStart(2, "0");
 
-      if (homeVal) homeVal.innerText = `${strDays}d ${strHours}h ${strMins}m`;
+      if (homeVal) homeVal.innerText = `${strDays}d ${strHours}h ${strMins}m ${strSecs}s`;
       if (cDays) cDays.innerText = strDays;
       if (cHours) cHours.innerText = strHours;
       if (cMins) cMins.innerText = strMins;
+      if (cSecs) cSecs.innerText = strSecs;
     }
 
     function updateProfileUI() {
@@ -2328,11 +3029,26 @@
       await loadBots();
       await loadEmotes();
 
-      // 6. Check Session & Revalidate
-      const isValid = await revalidateSession();
-      if (isValid) {
-        enterApp();
+      // 6. Instant Persistent Session Check (User NEVER sees login page while session active)
+      const savedSessionStr = localStorage.getItem("mpx_user_session");
+      if (savedSessionStr) {
+        try {
+          currentUserSession = JSON.parse(savedSessionStr);
+          enterApp();
+        } catch (e) {
+          console.warn("Session restore error:", e);
+        }
       }
+
+      // Revalidate in background to keep key expiry & server permissions perfectly synced
+      revalidateSession().then(isValid => {
+        if (!isValid && savedSessionStr) {
+          performLogout();
+          window.showToast("Your session has expired or the key is no longer valid.", "warning");
+        } else if (isValid && !savedSessionStr) {
+          enterApp();
+        }
+      });
 
       // 7. Audio context unlock on interaction
       document.addEventListener("click", () => {

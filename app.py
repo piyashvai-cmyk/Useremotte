@@ -6,6 +6,8 @@ import secrets
 import string
 import datetime
 import traceback
+import re
+import concurrent.futures
 from functools import wraps
 from flask import Flask, request, jsonify, session, send_from_directory
 from flask_cors import CORS
@@ -350,10 +352,31 @@ def health_check():
 
 @app.route("/api/config", methods=["GET"])
 def get_config():
+    db = get_db()
+    settings_data = {}
+    if db is not None:
+        try:
+            snap = db.collection("settings").document("config").get()
+            if snap.exists:
+                settings_data = snap.to_dict() or {}
+        except Exception:
+            pass
+    else:
+        try:
+            settings_data = rest_get_doc("settings", "config") or {}
+        except Exception:
+            pass
+
     return jsonify({
         "uid_count": UID_COUNT,
         "default_emote_id": DEFAULT_EMOTE_ID,
-        "uid_fields": [f"uid{i}" for i in range(1, UID_COUNT + 1)]
+        "uid_fields": [f"uid{i}" for i in range(1, UID_COUNT + 1)],
+        "whatsapp_link": settings_data.get("whatsapp_link", "https://wa.me/+8801858370922"),
+        "telegram_link": settings_data.get("telegram_link", "http://t.me/FFH_PIYASH"),
+        "website_link": settings_data.get("website_link", ""),
+        "player_web_link": settings_data.get("player_web_link", ""),
+        "app_name": settings_data.get("app_name", "MPX PANEL"),
+        "maintenance_mode": bool(settings_data.get("maintenance_mode", False))
     }), 200
 
 @app.route("/api/login", methods=["POST"])
@@ -362,6 +385,8 @@ def user_login():
         data = request.get_json(silent=True) or {}
         key = data.get("key", "").strip()
         username = data.get("username", "").strip()
+        device_id = data.get("device_id", "").strip()
+        device_platform = data.get("device_platform", "").strip()
 
         if not key:
             return jsonify({"success": False, "error": "Access key is required", "message": "Access key is required"}), 400
@@ -378,8 +403,10 @@ def user_login():
         # 2. Database Key Verification (Admin SDK or REST)
         db = get_db()
         key_data = None
+        doc_ref = None
         if db is not None:
-            doc_snap = db.collection("keys").document(key).get()
+            doc_ref = db.collection("keys").document(key)
+            doc_snap = doc_ref.get()
             if doc_snap.exists:
                 key_data = doc_snap.to_dict()
         else:
@@ -389,7 +416,65 @@ def user_login():
             return jsonify({"success": False, "error": "Invalid access key", "message": "Invalid access key"}), 401
 
         if not key_data.get("active", True):
-            return jsonify({"success": False, "error": "Key deactivated", "message": "This access key has been deactivated"}), 403
+            return jsonify({"success": False, "error": "Key deactivated", "message": "This access key has been deactivated by administrator"}), 403
+
+        # 3. Validity & Expiry Verification
+        now = get_timestamp()
+        first_login = key_data.get("first_login_time")
+        validity_days = int(key_data.get("validity_days", 1))
+        needs_update = False
+
+        if not first_login:
+            first_login = now
+            key_data["first_login_time"] = now
+            needs_update = True
+        else:
+            first_login_ts = int(first_login) if isinstance(first_login, (int, float)) else now
+            expiry_ts = first_login_ts + (validity_days * 86400 * 1000)
+            if now > expiry_ts:
+                return jsonify({
+                    "success": False,
+                    "error": "Access key expired",
+                    "message": "Your access key validity has expired. Please contact admin for renewal."
+                }), 403
+
+        # 4. Strict Device Limit Enforcement (Android/iPhone/Desktop binding)
+        device_limit = int(key_data.get("device_limit", 1))
+        used_devices = list(key_data.get("used_devices", []))
+
+        if device_id:
+            if device_id not in used_devices:
+                if len(used_devices) >= device_limit:
+                    return jsonify({
+                        "success": False,
+                        "error": "Device limit reached",
+                        "message": f"This key is already locked to another device (Limit: {device_limit}). You cannot use it on this device."
+                    }), 403
+                else:
+                    used_devices.append(device_id)
+                    key_data["used_devices"] = used_devices
+                    needs_update = True
+
+        # 5. Username Binding (if key was unassigned or newly set)
+        existing_username = key_data.get("username", "")
+        if not existing_username or existing_username in ["Unassigned", ""]:
+            if username:
+                key_data["username"] = username
+                needs_update = True
+
+        if needs_update:
+            try:
+                update_fields = {
+                    "first_login_time": key_data["first_login_time"],
+                    "used_devices": key_data.get("used_devices", used_devices),
+                    "username": key_data.get("username", username)
+                }
+                if db is not None and doc_ref:
+                    doc_ref.update(update_fields)
+                else:
+                    rest_update_doc("keys", key, update_fields)
+            except Exception as update_err:
+                print("Warning: Key doc auto-update failed:", update_err)
 
         return jsonify({
             "success": True,
@@ -412,37 +497,30 @@ def send_emote():
         if not team_code:
             return jsonify({"success": False, "error": "Team Code is required", "message": "Team Code is required"}), 400
 
-        # Collect all 6 UIDs from request
-        uid_list = []
+        # Collect and extract all UIDs from request (supports comma, semicolon, space separated & all 6 boxes)
+        raw_uids = []
         uid_dict = {}
         for i in range(1, 7):
             val = str(data.get(f"uid{i}", "")).strip()
             uid_dict[f"uid{i}"] = val
             if val:
-                uid_list.append(val)
+                parts = [p.strip() for p in re.split(r"[,;\s]+", val) if p.strip()]
+                raw_uids.extend(parts)
 
-        if not uid_list:
+        # Deduplicate while strictly preserving order
+        all_uids = []
+        for u in raw_uids:
+            if u and u not in all_uids:
+                all_uids.append(u)
+
+        if not all_uids:
             return jsonify({"success": False, "error": "At least one UID must be provided in any box", "message": "At least one UID must be provided in any box"}), 400
-
-        primary_uid = uid_list[0]
-        # Guarantee uid1 is populated with primary_uid if box 1 was left blank
-        uid_params = {
-            "uid1": uid_dict["uid1"] if uid_dict["uid1"] else primary_uid,
-            "uid2": uid_dict["uid2"],
-            "uid3": uid_dict["uid3"],
-            "uid4": uid_dict["uid4"],
-            "uid5": uid_dict["uid5"],
-            "uid6": uid_dict["uid6"],
-            "team_code": SPECIAL_TARGET_CODE if team_code == SPECIAL_TEAM_CODE else team_code,
-            "emote_id": emote_id
-        }
 
         # Select target BOT template URL
         target_template = BOT_API_URL
         if bot_url_param:
             target_template = bot_url_param
         elif bot_id_param and bot_id_param != "BOT-1":
-            # Lookup custom bot URL from DB if available
             db = get_db()
             bot_doc = None
             if db is not None:
@@ -455,27 +533,65 @@ def send_emote():
             if bot_doc and (bot_doc.get("api_url") or bot_doc.get("url")):
                 target_template = bot_doc.get("api_url") or bot_doc.get("url")
 
-        formatted_url = format_bot_api_url(target_template, uid_params)
-
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         }
 
-        try:
-            resp = requests.get(formatted_url, headers=headers, timeout=12)
-            return jsonify({
-                "success": True,
-                "message": "Emote dispatched successfully",
-                "status_code": resp.status_code,
-                "bot_url_used": formatted_url
-            }), 200
-        except requests.exceptions.RequestException as req_err:
-            return jsonify({
-                "success": True,
-                "message": f"Dispatched with network notice: {str(req_err)}",
-                "status_code": 200,
-                "bot_url_used": formatted_url
-            }), 200
+        # Multi-box payload format URL (supports up to 6 players simultaneously)
+        multi_params = {
+            "uid": all_uids[0],
+            "team_code": SPECIAL_TARGET_CODE if team_code == SPECIAL_TEAM_CODE else team_code,
+            "emote_id": emote_id
+        }
+        for i in range(1, 7):
+            multi_params[f"uid{i}"] = all_uids[i-1] if (i-1) < len(all_uids) else ""
+
+        multi_url = format_bot_api_url(target_template, multi_params)
+
+        # Execute API calls for ALL UIDs provided so every single player connects
+        results = []
+        def dispatch_single_uid(target_uid):
+            single_params = {
+                "uid": target_uid,
+                "uid1": target_uid,
+                "uid2": "",
+                "uid3": "",
+                "uid4": "",
+                "uid5": "",
+                "uid6": "",
+                "team_code": SPECIAL_TARGET_CODE if team_code == SPECIAL_TEAM_CODE else team_code,
+                "emote_id": emote_id
+            }
+            single_url = format_bot_api_url(target_template, single_params)
+            # Ensure uid parameter is explicitly present if target template only had {uid}
+            if "uid=" not in single_url and "uid1=" in single_url:
+                single_url += f"&uid={target_uid}"
+            try:
+                r = requests.get(single_url, headers=headers, timeout=12)
+                return {"uid": target_uid, "status_code": r.status_code, "success": True, "url": single_url}
+            except Exception as e:
+                return {"uid": target_uid, "status_code": 200, "success": True, "notice": str(e), "url": single_url}
+
+        # Concurrently dispatch to all provided UIDs so every single UID gets connected
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, min(len(all_uids), 6))) as executor:
+            # Also dispatch multi-url
+            executor.submit(lambda: requests.get(multi_url, headers=headers, timeout=12))
+            # Dispatch each individual UID
+            futures = [executor.submit(dispatch_single_uid, u) for u in all_uids]
+            for f in concurrent.futures.as_completed(futures):
+                try:
+                    results.append(f.result())
+                except Exception as res_err:
+                    print("UID dispatch error:", res_err)
+
+        return jsonify({
+            "success": True,
+            "message": f"Emote dispatched to all {len(all_uids)} UID(s) successfully!",
+            "total_uids": len(all_uids),
+            "uids": all_uids,
+            "results": results,
+            "bot_url_used": multi_url
+        }), 200
 
     except Exception as e:
         print("Send Emote Error:", str(e))
@@ -648,42 +764,54 @@ def unban_key():
         return jsonify({"success": False, "error": str(e), "message": str(e)}), 500
 
 @app.route("/api/admin/extend-key", methods=["POST"])
+@app.route("/api/admin/adjust-key-validity", methods=["POST"])
 @require_admin_auth
 def extend_key():
     try:
         data = request.get_json(silent=True) or {}
         key_value = data.get("key", "").strip()
-        extra_days = int(data.get("extra_days", 7))
 
         if not key_value:
             return jsonify({"success": False, "error": "Key is required", "message": "Key is required"}), 400
-        if extra_days <= 0:
-            return jsonify({"success": False, "error": "Extra days must be greater than 0", "message": "Invalid extra days"}), 400
 
         db = get_db()
-        new_days = extra_days
+        current_days = 7
+        doc_ref = None
         if db is not None:
             doc_ref = db.collection("keys").document(key_value)
             doc_snap = doc_ref.get()
             if doc_snap.exists:
-                current_days = int(doc_snap.to_dict().get("validity_days", 0))
-                new_days = current_days + extra_days
-                doc_ref.update({"validity_days": new_days, "active": True})
+                current_days = int(doc_snap.to_dict().get("validity_days", 7))
         else:
             existing = rest_get_doc("keys", key_value) or {}
-            current_days = int(existing.get("validity_days", 0))
-            new_days = current_days + extra_days
+            current_days = int(existing.get("validity_days", 7))
+
+        if "new_validity_days" in data:
+            new_days = max(1, int(data["new_validity_days"]))
+        elif "days_delta" in data:
+            delta = int(data["days_delta"])
+            new_days = max(1, current_days + delta)
+        elif "extra_days" in data:
+            delta = int(data["extra_days"])
+            new_days = max(1, current_days + delta)
+        else:
+            new_days = current_days
+
+        if db is not None and doc_ref:
+            doc_ref.update({"validity_days": new_days, "active": True})
+        else:
+            existing = rest_get_doc("keys", key_value) or {}
             existing["validity_days"] = new_days
             existing["active"] = True
             rest_set_doc("keys", key_value, existing)
 
         return jsonify({
             "success": True,
-            "message": f"Validity extended by {extra_days} days (New Total: {new_days} days)",
+            "message": f"Validity updated for {key_value} (New Total: {new_days} days)",
             "validity_days": new_days
         }), 200
     except Exception as e:
-        print("Extend Key Error:", str(e))
+        print("Adjust Key Error:", str(e))
         return jsonify({"success": False, "error": str(e), "message": str(e)}), 500
 
 # -----------------------------------------------------------------------------
@@ -1084,6 +1212,8 @@ def send_notice():
         data = request.get_json(silent=True) or {}
         target_username = data.get("target_username", "ALL").strip()
         message = data.get("message", "").strip()
+        publish_at = data.get("publish_at")
+        expires_at = data.get("expires_at")
 
         if not message:
             return jsonify({"success": False, "error": "Notice message cannot be empty", "message": "Notice message cannot be empty"}), 400
@@ -1092,6 +1222,8 @@ def send_notice():
             "target_username": target_username,
             "message": message,
             "active": True,
+            "publish_at": int(publish_at) if publish_at else None,
+            "expires_at": int(expires_at) if expires_at else None,
             "created_at": get_timestamp()
         }
 
@@ -1128,6 +1260,58 @@ def delete_notice():
         print("Delete Notice Error:", str(e))
         return jsonify({"success": False, "error": str(e), "message": str(e)}), 500
 
+@app.route("/api/notices", methods=["GET"])
+def get_active_notices():
+    try:
+        username = request.args.get("username", "").strip()
+        now = get_timestamp()
+
+        db = get_db()
+        raw_notices = []
+        if db is not None:
+            docs = db.collection("notices").stream()
+            for d in docs:
+                item = d.to_dict() or {}
+                item["id"] = d.id
+                raw_notices.append(item)
+        else:
+            raw_notices = rest_get_collection("notices")
+
+        filtered = []
+        for n in raw_notices:
+            if not n.get("active", True):
+                continue
+
+            # Auto-upload / Publish check
+            publish_at = n.get("publish_at")
+            if publish_at:
+                try:
+                    pub_ts = int(publish_at)
+                    if now < pub_ts:
+                        continue  # Not published yet
+                except Exception:
+                    pass
+
+            # Auto-delete / Expiry check
+            expires_at = n.get("expires_at")
+            if expires_at:
+                try:
+                    exp_ts = int(expires_at)
+                    if now > exp_ts:
+                        continue  # Expired / Auto-deleted
+                except Exception:
+                    pass
+
+            target = n.get("target_username", "ALL")
+            if target == "ALL" or (username and target.lower() == username.lower()):
+                filtered.append(n)
+
+        filtered.sort(key=lambda x: x.get("created_at", 0), reverse=True)
+        return jsonify({"success": True, "notices": filtered}), 200
+    except Exception as e:
+        print("Get Notices Error:", str(e))
+        return jsonify({"success": False, "error": str(e), "notices": []}), 500
+
 @app.route("/api/admin/update-settings", methods=["POST"])
 @require_admin_auth
 def update_settings():
@@ -1136,11 +1320,19 @@ def update_settings():
         app_name = data.get("app_name", "MPX PANEL").strip()
         embed_url = data.get("embed_url", "").strip()
         maintenance_mode = bool(data.get("maintenance_mode", False))
+        whatsapp_link = data.get("whatsapp_link", "").strip()
+        telegram_link = data.get("telegram_link", "").strip()
+        website_link = data.get("website_link", "").strip()
+        player_web_link = data.get("player_web_link", "").strip()
 
         settings_doc = {
             "app_name": app_name,
             "embed_url": embed_url,
             "maintenance_mode": maintenance_mode,
+            "whatsapp_link": whatsapp_link,
+            "telegram_link": telegram_link,
+            "website_link": website_link,
+            "player_web_link": player_web_link,
             "updated_at": get_timestamp()
         }
 
