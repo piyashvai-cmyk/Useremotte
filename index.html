@@ -1700,23 +1700,39 @@
     // ==========================================
     // 10. SEND EMOTE FUNCTION (Via Backend Proxy)
     // ==========================================
+    let lastSendTimestamp = 0;
+
     window.sendEmote = async function() {
-      if (isSending) return;
+      const now = Date.now();
+      // Debounce: prevent any double-click or rapid clicks within 1000ms
+      if (isSending || (now - lastSendTimestamp < 1000)) {
+        console.warn("sendEmote call ignored: already sending or throttled.");
+        return;
+      }
+      isSending = true;
+      lastSendTimestamp = now;
+      updateSendButtonUI(true);
 
       // Session verification
       if (!currentUserSession) {
         window.showToast("Please login first.", "error");
+        isSending = false;
+        updateSendButtonUI(false);
         return;
       }
 
       if (!currentUserSession.isMaster && currentKeyData) {
         if (!currentKeyData.active) {
           window.showToast("Your key is inactive or banned.", "error");
+          isSending = false;
+          updateSendButtonUI(false);
           logout();
           return;
         }
         if (currentKeyData.expiryDate && Date.now() > currentKeyData.expiryDate.getTime()) {
           window.showToast("Your access key has expired.", "error");
+          isSending = false;
+          updateSendButtonUI(false);
           logout();
           return;
         }
@@ -1730,6 +1746,8 @@
         window.showToast("Please enter Team Code.", "warning");
         window.playWarningSound();
         if (teamCodeInput) teamCodeInput.focus();
+        isSending = false;
+        updateSendButtonUI(false);
         return;
       }
 
@@ -1748,6 +1766,8 @@
         window.playWarningSound();
         const firstInput = document.getElementById("uid1");
         if (firstInput) firstInput.focus();
+        isSending = false;
+        updateSendButtonUI(false);
         return;
       }
 
@@ -1757,6 +1777,8 @@
       if (!selectedBot || !selectedBot.id) {
         window.showToast(`No BOT API available for region ${currentRegion}. Please select another region or add BOT in Admin Panel.`, "error");
         window.playErrorSound();
+        isSending = false;
+        updateSendButtonUI(false);
         return;
       }
 
@@ -1771,10 +1793,6 @@
         bot_url: selectedBot.api_url || selectedBot.url || "",
         region: currentRegion
       };
-
-      // Lock UI state
-      isSending = true;
-      updateSendButtonUI(true);
 
       try {
         const response = await fetch("/api/send-emote", {
@@ -1800,8 +1818,10 @@
         window.showToast("Unable to reach backend server. Please try again.", "error");
         window.playErrorSound();
       } finally {
-        isSending = false;
-        updateSendButtonUI(false);
+        setTimeout(() => {
+          isSending = false;
+          updateSendButtonUI(false);
+        }, 500);
       }
     };
 
@@ -2024,6 +2044,7 @@
         // Prevent trigger if star button was clicked
         if (e.target.closest(".favorite-star-btn")) return;
         e.preventDefault();
+        e.stopPropagation();
         window.playClickSound();
         selectedEmote = emote.id;
         updateSelectedEmoteUI();

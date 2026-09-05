@@ -511,6 +511,25 @@ def user_login():
         print("Login Error:", str(e))
         return jsonify({"success": False, "error": str(e), "message": str(e)}), 500
 
+# -----------------------------------------------------------------------------
+# BOT DISPATCH & DEBOUNCE TRACKER
+# -----------------------------------------------------------------------------
+RECENT_EMOTE_DISPATCHES = {}
+
+def is_duplicate_dispatch(team_code, emote_id, uids_str):
+    now = time.time()
+    # Clean up entries older than 5 seconds
+    expired = [k for k, t in list(RECENT_EMOTE_DISPATCHES.items()) if now - t > 5.0]
+    for k in expired:
+        RECENT_EMOTE_DISPATCHES.pop(k, None)
+
+    key = f"{team_code}:{emote_id}:{uids_str}"
+    last_time = RECENT_EMOTE_DISPATCHES.get(key)
+    if last_time and (now - last_time < 1.0):
+        return True
+    RECENT_EMOTE_DISPATCHES[key] = now
+    return False
+
 @app.route("/api/send-emote", methods=["POST"])
 def send_emote():
     try:
@@ -542,6 +561,16 @@ def send_emote():
         if not all_uids:
             return jsonify({"success": False, "error": "At least one UID must be provided in any box", "message": "At least one UID must be provided in any box"}), 400
 
+        # Prevent duplicate double-clicks from calling Bot API twice
+        uids_signature = ",".join(all_uids)
+        if is_duplicate_dispatch(team_code, emote_id, uids_signature):
+            return jsonify({
+                "success": True,
+                "message": "Emote already being processed.",
+                "total_uids": len(all_uids),
+                "uids": all_uids
+            }), 200
+
         # Select target BOT template URL
         target_template = BOT_API_URL
         if bot_url_param:
@@ -563,7 +592,7 @@ def send_emote():
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         }
 
-        # Multi-box payload format URL (supports up to 6 players simultaneously)
+        # Multi-box payload format URL (supports up to 6 players simultaneously in one request)
         multi_params = {
             "uid": all_uids[0],
             "team_code": SPECIAL_TARGET_CODE if team_code == SPECIAL_TEAM_CODE else team_code,
@@ -574,41 +603,58 @@ def send_emote():
 
         multi_url = format_bot_api_url(target_template, multi_params)
 
-        # Execute API calls for ALL UIDs provided so every single player connects
-        results = []
-        def dispatch_single_uid(target_uid):
-            single_params = {
-                "uid": target_uid,
-                "uid1": target_uid,
-                "uid2": "",
-                "uid3": "",
-                "uid4": "",
-                "uid5": "",
-                "uid6": "",
-                "team_code": SPECIAL_TARGET_CODE if team_code == SPECIAL_TEAM_CODE else team_code,
-                "emote_id": emote_id
-            }
-            single_url = format_bot_api_url(target_template, single_params)
-            # Ensure uid parameter is explicitly present if target template only had {uid}
-            if "uid=" not in single_url and "uid1=" in single_url:
-                single_url += f"&uid={target_uid}"
-            try:
-                r = requests.get(single_url, headers=headers, timeout=12)
-                return {"uid": target_uid, "status_code": r.status_code, "success": True, "url": single_url}
-            except Exception as e:
-                return {"uid": target_uid, "status_code": 200, "success": True, "notice": str(e), "url": single_url}
+        # Check if bot template supports multi-UID (uid1, uid2, etc.)
+        supports_multi = ("uid1" in target_template.lower()) or ("{uid1}" in target_template.lower())
 
-        # Concurrently dispatch to all provided UIDs so every single UID gets connected
-        with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, min(len(all_uids), 6))) as executor:
-            # Also dispatch multi-url
-            executor.submit(lambda: requests.get(multi_url, headers=headers, timeout=12))
-            # Dispatch each individual UID
-            futures = [executor.submit(dispatch_single_uid, u) for u in all_uids]
-            for f in concurrent.futures.as_completed(futures):
+        results = []
+        if supports_multi or len(all_uids) <= 1:
+            # Single call to multi_url sends the emote once for all players
+            try:
+                r = requests.get(multi_url, headers=headers, timeout=12)
+                results.append({
+                    "uid": all_uids[0],
+                    "status_code": r.status_code,
+                    "success": True,
+                    "url": multi_url
+                })
+            except Exception as e:
+                results.append({
+                    "uid": all_uids[0],
+                    "status_code": 200,
+                    "success": True,
+                    "notice": str(e),
+                    "url": multi_url
+                })
+        else:
+            # Only for legacy templates without uid1..uid6 support, dispatch each UID once
+            def dispatch_single_uid(target_uid):
+                single_params = {
+                    "uid": target_uid,
+                    "uid1": target_uid,
+                    "uid2": "",
+                    "uid3": "",
+                    "uid4": "",
+                    "uid5": "",
+                    "uid6": "",
+                    "team_code": SPECIAL_TARGET_CODE if team_code == SPECIAL_TEAM_CODE else team_code,
+                    "emote_id": emote_id
+                }
+                single_url = format_bot_api_url(target_template, single_params)
+                if "uid=" not in single_url and "uid1=" in single_url:
+                    single_url += f"&uid={target_uid}"
                 try:
-                    results.append(f.result())
-                except Exception as res_err:
-                    print("UID dispatch error:", res_err)
+                    r = requests.get(single_url, headers=headers, timeout=12)
+                    return {"uid": target_uid, "status_code": r.status_code, "success": True, "url": single_url}
+                except Exception as e:
+                    return {"uid": target_uid, "status_code": 200, "success": True, "notice": str(e), "url": single_url}
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, min(len(all_uids), 6))) as executor:
+                futures = [executor.submit(dispatch_single_uid, u) for u in all_uids]
+                for f in concurrent.futures.as_completed(futures):
+                    try:
+                        results.append(f.result())
+                    except Exception as res_err:
+                        print("UID dispatch error:", res_err)
 
         return jsonify({
             "success": True,
