@@ -796,18 +796,28 @@
                     <input type="text" id="genCustomKey" placeholder="e.g. VIP-8X99A" class="glass-input w-full px-4 py-2.5 rounded-xl text-xs font-mono">
                 </div>
 
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                         <label class="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
-                            Validity Days
+                            Validity
                         </label>
-                        <input type="number" id="genValidity" value="7" min="1" max="3650" required class="glass-input w-full px-4 py-2.5 rounded-xl text-xs">
+                        <input type="number" id="genValidity" value="7" min="1" max="99999" required class="glass-input w-full px-3 py-2.5 rounded-xl text-xs font-bold text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
+                            Unit (মিনিট / ঘণ্টা / দিন)
+                        </label>
+                        <select id="genValidityUnit" class="glass-input w-full px-3 py-2.5 rounded-xl text-xs font-bold bg-[#141a29] text-white border border-white/10 cursor-pointer">
+                            <option value="days">Days (দিন)</option>
+                            <option value="hours">Hours (ঘণ্টা)</option>
+                            <option value="minutes">Minutes (মিনিট)</option>
+                        </select>
                     </div>
                     <div>
                         <label class="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
                             Device Limit
                         </label>
-                        <input type="number" id="genDeviceLimit" value="2" min="1" max="100" required class="glass-input w-full px-4 py-2.5 rounded-xl text-xs">
+                        <input type="number" id="genDeviceLimit" value="2" min="1" max="100" required class="glass-input w-full px-3 py-2.5 rounded-xl text-xs font-bold text-white">
                     </div>
                 </div>
 
@@ -2147,6 +2157,19 @@
         // ==========================================
         // RENDERERS
         // ==========================================
+        function formatKeyValidityDisplay(k) {
+            if (k.validity_unit === 'minutes' || (k.validity_minutes && k.validity_minutes < 60)) {
+                const mins = k.validity_value || k.validity_minutes || 1;
+                return `${mins} Min`;
+            }
+            if (k.validity_unit === 'hours' || (k.validity_minutes && k.validity_minutes < 1440)) {
+                const hrs = k.validity_value || Math.round((k.validity_minutes || 60) / 60);
+                return `${hrs} Hours`;
+            }
+            const days = k.validity_value || k.validity_days || 7;
+            return `${days} Days`;
+        }
+
         function renderKeysTable() {
             const tbody = document.getElementById('keysTableBody');
             if (!tbody) return;
@@ -2171,7 +2194,7 @@
             tbody.innerHTML = filtered.map(k => {
                 const keyStr = k.key || k.id;
                 const username = k.username || '<span class="text-gray-500 italic">Unassigned</span>';
-                const validity = k.validity_days || 7;
+                const validityDisplay = formatKeyValidityDisplay(k);
                 const used = (k.used_devices || []).length;
                 const limit = k.device_limit || 2;
                 const isActive = k.active !== false;
@@ -2180,7 +2203,7 @@
                     <tr class="hover:bg-white/[0.02] transition-colors">
                         <td class="p-4 font-mono font-bold text-white">${escapeHtml(keyStr)}</td>
                         <td class="p-4 font-medium text-gray-300">${username}</td>
-                        <td class="p-4 font-semibold text-gray-300">${validity} Days</td>
+                        <td class="p-4 font-semibold text-amber-300">${validityDisplay}</td>
                         <td class="p-4">
                             <span class="px-2.5 py-1 rounded-lg text-xs font-bold ${used >= limit ? 'bg-red-950/60 text-red-400 border border-red-500/30' : 'bg-gray-800 text-gray-300'}">
                                 ${used} / ${limit}
@@ -2192,19 +2215,22 @@
                                 '<span class="px-2.5 py-1 rounded-full bg-red-950/60 border border-red-500/40 text-red-400 text-[10px] font-extrabold uppercase tracking-wider">REVOKED</span>'
                             }
                         </td>
-                        <td class="p-4 text-right space-x-2">
-                            <button onclick="openExtendModal('${escapeHtml(keyStr)}')" class="px-3 py-1.5 rounded-lg bg-orange-600/20 hover:bg-orange-600 text-orange-400 hover:text-white border border-orange-500/30 transition-all text-xs font-bold" title="Adjust Validity (সময় বাড়ানো / কমানো)">
-                                <i class="fas fa-clock mr-1"></i> Time (+/-)
+                        <td class="p-4 text-right space-x-1.5 whitespace-nowrap">
+                            <button onclick="openExtendModal('${escapeHtml(keyStr)}')" class="px-2.5 py-1.5 rounded-lg bg-orange-600/20 hover:bg-orange-600 text-orange-400 hover:text-white border border-orange-500/30 transition-all text-xs font-bold" title="Adjust Validity (সময় বাড়ানো / কমানো)">
+                                <i class="fas fa-clock mr-1"></i> Time
                             </button>
                             ${isActive ? `
-                                <button onclick="banKeyAction('${escapeHtml(keyStr)}')" class="px-3 py-1.5 rounded-lg bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 transition-all text-xs font-bold">
+                                <button onclick="banKeyAction('${escapeHtml(keyStr)}')" class="px-2.5 py-1.5 rounded-lg bg-amber-600/20 hover:bg-amber-600 text-amber-400 hover:text-white border border-amber-500/30 transition-all text-xs font-bold" title="Ban key">
                                     <i class="fas fa-ban mr-1"></i> Ban
                                 </button>
                             ` : `
-                                <button onclick="unbanKeyAction('${escapeHtml(keyStr)}')" class="px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/30 transition-all text-xs font-bold">
+                                <button onclick="unbanKeyAction('${escapeHtml(keyStr)}')" class="px-2.5 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/30 transition-all text-xs font-bold" title="Unban key">
                                     <i class="fas fa-check-circle mr-1"></i> Unban
                                 </button>
                             `}
+                            <button onclick="deleteKeyAction('${escapeHtml(keyStr)}')" class="px-2.5 py-1.5 rounded-lg bg-red-600/30 hover:bg-red-600 text-red-300 hover:text-white border border-red-500/40 transition-all text-xs font-bold shadow-sm" title="Delete Key Permanently from database">
+                                <i class="fas fa-trash-alt mr-1"></i> Delete
+                            </button>
                         </td>
                     </tr>
                 `;
@@ -2224,7 +2250,7 @@
             tbody.innerHTML = recent.map(k => {
                 const keyStr = k.key || k.id;
                 const username = k.username || 'Unassigned';
-                const validity = k.validity_days || 7;
+                const validityDisplay = formatKeyValidityDisplay(k);
                 const used = (k.used_devices || []).length;
                 const limit = k.device_limit || 2;
                 const isActive = k.active !== false;
@@ -2233,7 +2259,7 @@
                     <tr class="hover:bg-white/[0.02]">
                         <td class="p-3 font-mono font-bold text-white">${escapeHtml(keyStr)}</td>
                         <td class="p-3 text-gray-300">${escapeHtml(username)}</td>
-                        <td class="p-3 text-gray-300">${validity}d</td>
+                        <td class="p-3 text-amber-300 font-semibold">${validityDisplay}</td>
                         <td class="p-3">${used}/${limit}</td>
                         <td class="p-3">
                             <span class="px-2 py-0.5 rounded text-[9px] font-bold ${isActive ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/30' : 'bg-red-950 text-red-400'}">
@@ -2567,6 +2593,40 @@
                 await loadKeys();
             } else {
                 showToast('Failed to unban key.', 'error');
+            }
+        };
+
+        window.deleteKeyAction = async function(keyStr) {
+            if (!confirm(`Are you sure you want to permanently DELETE key: "${keyStr}"?\n\nThis will remove the key and username from the database. Any active user using this key will be logged out immediately.`)) return;
+
+            showToast(`Deleting key ${keyStr} from database...`, 'info');
+            let success = false;
+            try {
+                const res = await apiRequest('/api/admin/delete-key', 'POST', { key: keyStr });
+                if (res && res.success) {
+                    success = true;
+                }
+            } catch (e) {
+                console.warn("API delete-key fallback to client Firestore SDK:", e);
+            }
+
+            if (!success && db) {
+                try {
+                    await deleteDoc(doc(db, "keys", keyStr));
+                    success = true;
+                } catch (err) {
+                    console.error("Client Firestore SDK delete key error:", err);
+                }
+            }
+
+            if (success) {
+                window.adminState.keys = window.adminState.keys.filter(k => (k.key || k.id) !== keyStr);
+                renderKeysTable();
+                renderRecentKeys();
+                showToast(`Key ${keyStr} deleted permanently!`, 'success');
+                await loadKeys();
+            } else {
+                showToast('Failed to delete key from database.', 'error');
             }
         };
 
@@ -3008,7 +3068,8 @@
                 e.preventDefault();
                 const username = document.getElementById('genUsername').value.trim();
                 const custom_key = document.getElementById('genCustomKey').value.trim();
-                const validity_days = parseInt(document.getElementById('genValidity').value) || 7;
+                const validity = parseFloat(document.getElementById('genValidity').value) || 7;
+                const validity_unit = document.getElementById('genValidityUnit')?.value || 'days';
                 const device_limit = parseInt(document.getElementById('genDeviceLimit').value) || 2;
 
                 if (custom_key) {
@@ -3031,7 +3092,7 @@
                 let apiErrorMsg = null;
                 try {
                     const res = await apiRequest('/api/admin/generate-key', 'POST', {
-                        username, custom_key, validity_days, device_limit
+                        username, custom_key, validity, validity_unit, device_limit
                     });
                     if (res && res.success) {
                         keyResult = res.key;
@@ -3056,10 +3117,28 @@
                         let randKey = "";
                         for (let i = 0; i < 8; i++) randKey += chars.charAt(Math.floor(Math.random() * chars.length));
                         const finalKey = custom_key || `MPX-${randKey}`;
+
+                        let validity_minutes = validity * 1440;
+                        let validity_ms = validity * 86400 * 1000;
+                        let validity_days = validity;
+                        if (validity_unit === 'minutes') {
+                            validity_minutes = validity;
+                            validity_ms = validity * 60 * 1000;
+                            validity_days = +(validity / 1440).toFixed(4);
+                        } else if (validity_unit === 'hours') {
+                            validity_minutes = validity * 60;
+                            validity_ms = validity * 3600 * 1000;
+                            validity_days = +(validity / 24).toFixed(4);
+                        }
+
                         const keyDoc = {
                             key: finalKey,
                             username: username || "Unassigned",
-                            validity_days: Math.max(1, validity_days),
+                            validity_value: validity,
+                            validity_unit: validity_unit,
+                            validity_minutes: validity_minutes,
+                            validity_ms: validity_ms,
+                            validity_days: validity_days,
                             device_limit: Math.max(1, device_limit),
                             active: true,
                             first_login_time: null,

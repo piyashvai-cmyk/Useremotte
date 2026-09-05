@@ -434,16 +434,29 @@ def user_login():
         # 3. Validity & Expiry Verification
         now = get_timestamp()
         first_login = key_data.get("first_login_time")
-        validity_days = int(key_data.get("validity_days", 1))
-        needs_update = False
 
+        # Support minutes, hours, and days validity
+        validity_ms = 0
+        if "validity_ms" in key_data and key_data["validity_ms"]:
+            validity_ms = int(key_data["validity_ms"])
+        elif "validity_minutes" in key_data and key_data["validity_minutes"]:
+            validity_ms = int(key_data["validity_minutes"]) * 60 * 1000
+        elif key_data.get("validity_unit") == "minutes" and key_data.get("validity_value"):
+            validity_ms = int(float(key_data["validity_value"]) * 60 * 1000)
+        elif key_data.get("validity_unit") == "hours" and key_data.get("validity_value"):
+            validity_ms = int(float(key_data["validity_value"]) * 3600 * 1000)
+        else:
+            validity_days = float(key_data.get("validity_days", 1))
+            validity_ms = int(validity_days * 86400 * 1000)
+
+        needs_update = False
         if not first_login:
             first_login = now
             key_data["first_login_time"] = now
             needs_update = True
         else:
             first_login_ts = int(first_login) if isinstance(first_login, (int, float)) else now
-            expiry_ts = first_login_ts + (validity_days * 86400 * 1000)
+            expiry_ts = first_login_ts + validity_ms
             if now > expiry_ts:
                 return jsonify({
                     "success": False,
@@ -660,8 +673,35 @@ def generate_key():
         data = request.get_json(silent=True) or {}
         username = data.get("username", "").strip()
         custom_key = data.get("custom_key", "").strip()
-        validity_days = int(data.get("validity_days", 7))
         device_limit = int(data.get("device_limit", 2))
+
+        # Validity can be provided as validity value + validity unit (minutes, hours, days)
+        raw_val = data.get("validity", data.get("validity_days", 7))
+        try:
+            validity_val = float(raw_val)
+        except Exception:
+            validity_val = 7.0
+
+        if validity_val <= 0:
+            validity_val = 1.0
+
+        validity_unit = str(data.get("validity_unit", "days")).strip().lower()
+        if validity_unit not in ["minutes", "hours", "days"]:
+            validity_unit = "days"
+
+        if validity_unit == "minutes":
+            validity_minutes = int(validity_val)
+            validity_ms = int(validity_val * 60 * 1000)
+            validity_days = round(validity_val / 1440.0, 4)
+        elif validity_unit == "hours":
+            validity_minutes = int(validity_val * 60)
+            validity_ms = int(validity_val * 3600 * 1000)
+            validity_days = round(validity_val / 24.0, 4)
+        else: # days
+            validity_unit = "days"
+            validity_minutes = int(validity_val * 1440)
+            validity_ms = int(validity_val * 86400 * 1000)
+            validity_days = int(validity_val)
 
         key_value = custom_key if custom_key else f"MPX-{generate_random_key(8)}"
 
@@ -688,7 +728,11 @@ def generate_key():
         key_doc = {
             "key": key_value,
             "username": username if username else "Unassigned",
-            "validity_days": max(1, validity_days),
+            "validity_value": int(validity_val) if validity_val.is_integer() else validity_val,
+            "validity_unit": validity_unit,
+            "validity_minutes": validity_minutes,
+            "validity_ms": validity_ms,
+            "validity_days": validity_days,
             "device_limit": max(1, device_limit),
             "active": True,
             "first_login_time": None,
@@ -716,6 +760,32 @@ def generate_key():
     except Exception as e:
         print("Generate Key Error:", str(e))
         traceback.print_exc()
+        return jsonify({"success": False, "error": str(e), "message": str(e)}), 500
+
+@app.route("/api/admin/delete-key", methods=["POST"])
+@require_admin_auth
+def delete_key():
+    try:
+        data = request.get_json(silent=True) or {}
+        key_value = data.get("key", "").strip()
+
+        if not key_value:
+            return jsonify({"success": False, "error": "Key is required", "message": "Key is required"}), 400
+
+        db = get_db()
+        success = False
+        if db is not None:
+            db.collection("keys").document(key_value).delete()
+            success = True
+        else:
+            success = rest_delete_doc("keys", key_value)
+
+        return jsonify({
+            "success": True,
+            "message": f"Key {key_value} and associated user deleted permanently from database"
+        }), 200
+    except Exception as e:
+        print("Delete Key Error:", str(e))
         return jsonify({"success": False, "error": str(e), "message": str(e)}), 500
 
 @app.route("/api/admin/revoke-key", methods=["POST"])
