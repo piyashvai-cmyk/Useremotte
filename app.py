@@ -405,7 +405,16 @@ def user_login():
             return jsonify({"success": False, "error": "Access key is required", "message": "Access key is required"}), 400
 
         # 1. Master Key Verification
-        if key == MASTER_KEY or key == ADMIN_PASSWORD:
+        is_master = (key == MASTER_KEY or key == ADMIN_PASSWORD)
+        if not is_master:
+            try:
+                cfg = rest_get_doc("settings", "config")
+                if cfg and (cfg.get("master_key") == key or cfg.get("admin_password") == key):
+                    is_master = True
+            except Exception:
+                pass
+
+        if is_master:
             return jsonify({
                 "success": True,
                 "is_master": True,
@@ -607,54 +616,35 @@ def send_emote():
         supports_multi = ("uid1" in target_template.lower()) or ("{uid1}" in target_template.lower())
 
         results = []
-        if supports_multi or len(all_uids) <= 1:
-            # Single call to multi_url sends the emote once for all players
+        def dispatch_single_uid(target_uid):
+            single_params = {
+                "uid": target_uid,
+                "uid1": target_uid,
+                "uid2": target_uid,
+                "uid3": target_uid,
+                "uid4": target_uid,
+                "uid5": target_uid,
+                "uid6": target_uid,
+                "team_code": SPECIAL_TARGET_CODE if team_code == SPECIAL_TEAM_CODE else team_code,
+                "emote_id": emote_id
+            }
+            single_url = format_bot_api_url(target_template, single_params)
+            if "uid=" not in single_url and "uid1=" in single_url:
+                single_url += f"&uid={target_uid}"
             try:
-                r = requests.get(multi_url, headers=headers, timeout=12)
-                results.append({
-                    "uid": all_uids[0],
-                    "status_code": r.status_code,
-                    "success": True,
-                    "url": multi_url
-                })
+                r = requests.get(single_url, headers=headers, timeout=12)
+                return {"uid": target_uid, "status_code": r.status_code, "success": True, "url": single_url}
             except Exception as e:
-                results.append({
-                    "uid": all_uids[0],
-                    "status_code": 200,
-                    "success": True,
-                    "notice": str(e),
-                    "url": multi_url
-                })
-        else:
-            # Only for legacy templates without uid1..uid6 support, dispatch each UID once
-            def dispatch_single_uid(target_uid):
-                single_params = {
-                    "uid": target_uid,
-                    "uid1": target_uid,
-                    "uid2": "",
-                    "uid3": "",
-                    "uid4": "",
-                    "uid5": "",
-                    "uid6": "",
-                    "team_code": SPECIAL_TARGET_CODE if team_code == SPECIAL_TEAM_CODE else team_code,
-                    "emote_id": emote_id
-                }
-                single_url = format_bot_api_url(target_template, single_params)
-                if "uid=" not in single_url and "uid1=" in single_url:
-                    single_url += f"&uid={target_uid}"
-                try:
-                    r = requests.get(single_url, headers=headers, timeout=12)
-                    return {"uid": target_uid, "status_code": r.status_code, "success": True, "url": single_url}
-                except Exception as e:
-                    return {"uid": target_uid, "status_code": 200, "success": True, "notice": str(e), "url": single_url}
+                return {"uid": target_uid, "status_code": 200, "success": True, "notice": str(e), "url": single_url}
 
-            with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, min(len(all_uids), 6))) as executor:
-                futures = [executor.submit(dispatch_single_uid, u) for u in all_uids]
-                for f in concurrent.futures.as_completed(futures):
-                    try:
-                        results.append(f.result())
-                    except Exception as res_err:
-                        print("UID dispatch error:", res_err)
+        # Concurrently dispatch to ALL provided UIDs so every single player box emotes
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, min(len(all_uids), 6))) as executor:
+            futures = [executor.submit(dispatch_single_uid, u) for u in all_uids]
+            for f in concurrent.futures.as_completed(futures):
+                try:
+                    results.append(f.result())
+                except Exception as res_err:
+                    print("UID dispatch error:", res_err)
 
         return jsonify({
             "success": True,
@@ -708,6 +698,124 @@ def check_admin_session():
 def admin_logout():
     session.pop("admin_logged_in", None)
     return jsonify({"success": True, "message": "Logged out successfully"}), 200
+
+# -----------------------------------------------------------------------------
+# ADMIN PASSWORD & MASTER CREDENTIALS MANAGEMENT
+# -----------------------------------------------------------------------------
+@app.route("/api/admin/verify-auth-code", methods=["POST"])
+@require_admin_auth
+def verify_auth_code():
+    data = request.get_json(silent=True) or {}
+    code = str(data.get("security_code", "")).strip()
+    if code == "ABCD70":
+        return jsonify({"success": True, "message": "Security authorization granted"}), 200
+    return jsonify({
+        "success": False, 
+        "error": "Invalid security code", 
+        "message": "ভুল সিকিউরিটি কোড! সঠিক কোড প্রদান করুন।"
+    }), 403
+
+@app.route("/api/admin/change-credentials", methods=["POST"])
+@require_admin_auth
+def change_credentials():
+    global ADMIN_PASSWORD, MASTER_KEY
+    try:
+        data = request.get_json(silent=True) or {}
+        security_code = str(data.get("security_code", "")).strip()
+        current_admin_password = str(data.get("current_admin_password", "")).strip()
+        new_admin_password = str(data.get("new_admin_password", "")).strip()
+        new_master_key = str(data.get("new_master_key", "")).strip()
+
+        # 1. Strictly verify the security code is ABCD70
+        if security_code != "ABCD70":
+            return jsonify({
+                "success": False,
+                "error": "Invalid security code",
+                "message": "সিকিউরিটি কোড সঠিক নয়! সঠিক কোড দিন (ABCD70)।"
+            }), 403
+
+        if not new_admin_password and not new_master_key:
+            return jsonify({
+                "success": False,
+                "error": "No password provided",
+                "message": "এডমিন পাসওয়ার্ড অথবা মাস্টার পাসওয়ার্ড প্রদান করুন।"
+            }), 400
+
+        # Retrieve current configuration from Firestore
+        cfg = None
+        db = get_db()
+        if db is not None:
+            snap = db.collection("settings").document("config").get()
+            if snap.exists:
+                cfg = snap.to_dict()
+        else:
+            cfg = rest_get_doc("settings", "config")
+        
+        cfg = cfg or {}
+        active_admin_pwd = cfg.get("admin_password") or ADMIN_PASSWORD or "7XPIYASH"
+
+        update_fields = {}
+
+        # 2. If new admin password is requested, verify current admin password
+        if new_admin_password:
+            valid_current_admin_pwds = {active_admin_pwd, ADMIN_PASSWORD, "7XPIYASH"}
+            if current_admin_password not in valid_current_admin_pwds:
+                return jsonify({
+                    "success": False,
+                    "error": "Incorrect current password",
+                    "message": "এডমিন প্যানেলের আগের পাসওয়ার্ডটি সঠিক নয়।"
+                }), 400
+
+            if len(new_admin_password) < 4:
+                return jsonify({
+                    "success": False,
+                    "error": "Password too short",
+                    "message": "নতুন এডমিন পাসওয়ার্ড কমপক্ষে ৪ অক্ষরের হতে হবে।"
+                }), 400
+
+            update_fields["admin_password"] = new_admin_password
+            ADMIN_PASSWORD = new_admin_password
+
+        # 3. If new master key is requested
+        if new_master_key:
+            if len(new_master_key) < 4:
+                return jsonify({
+                    "success": False,
+                    "error": "Master key too short",
+                    "message": "নতুন মাস্টার পাসওয়ার্ড কমপক্ষে ৪ অক্ষরের হতে হবে।"
+                }), 400
+
+            update_fields["master_key"] = new_master_key
+            MASTER_KEY = new_master_key
+
+        update_fields["updated_at"] = get_timestamp()
+
+        # 4. Save to Firestore
+        if db is not None:
+            db.collection("settings").document("config").set(update_fields, merge=True)
+        else:
+            rest_set_doc("settings", "config", update_fields)
+
+        session["admin_logged_in"] = True
+
+        msg = "পাসওয়ার্ড সফলভাবে পরিবর্তন করা হয়েছে!"
+        if new_admin_password and new_master_key:
+            msg = "এডমিন পাসওয়ার্ড এবং ইউজার প্যানেল মাস্টার কি উভয়ই সফলভাবে পরিবর্তন করা হয়েছে!"
+        elif new_admin_password:
+            msg = "এডমিন প্যানেলের পাসওয়ার্ড সফলভাবে পরিবর্তন করা হয়েছে!"
+        elif new_master_key:
+            msg = "ইউজার প্যানেলের মাস্টার পাসওয়ার্ড সফলভাবে পরিবর্তন করা হয়েছে!"
+
+        return jsonify({
+            "success": True,
+            "message": msg,
+            "admin_password_changed": bool(new_admin_password),
+            "master_key_changed": bool(new_master_key)
+        }), 200
+
+    except Exception as e:
+        print("Change Credentials Error:", str(e))
+        return jsonify({"success": False, "error": str(e), "message": str(e)}), 500
 
 # -----------------------------------------------------------------------------
 # KEY MANAGEMENT ENDPOINTS (ADMIN PROTECTED)
