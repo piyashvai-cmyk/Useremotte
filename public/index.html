@@ -1331,8 +1331,16 @@
     let allEmotes = [...DEFAULT_EMOTES];
     let selectedEmote = DEFAULT_EMOTE_ID;
     let selectedCategory = "ALL";
-    let activeBots = [];
-    let selectedBot = null;
+    const DEFAULT_BOT_CONFIG = {
+      id: "BOT-1",
+      name: "BOT-1 (Fast)",
+      api_url: "https://maruf-piyash-vps.up.railway.app/app/5050/emote?uid1=uid1&uid2=uid2&uid3=uid3&uid4=uid4&uid5=uid5&uid6=uid6&team_code=team_code&emote_id=emote_id",
+      region: "ALL",
+      uid_boxes: 6,
+      active: true
+    };
+    let activeBots = [DEFAULT_BOT_CONFIG];
+    let selectedBot = DEFAULT_BOT_CONFIG;
     let currentUserSession = null;
     let currentKeyData = null;
     let countdownInterval = null;
@@ -1704,8 +1712,8 @@
 
     window.sendEmote = async function() {
       const now = Date.now();
-      // Debounce: prevent any double-click or rapid clicks within 1000ms
-      if (isSending || (now - lastSendTimestamp < 1000)) {
+      // Debounce: prevent any double-click or rapid clicks within 2000ms
+      if (isSending || (now - lastSendTimestamp < 2000)) {
         console.warn("sendEmote call ignored: already sending or throttled.");
         return;
       }
@@ -1751,15 +1759,16 @@
         return;
       }
 
-      // Collect UIDs from any box
+      // Collect UIDs from any box (checks all 6 boxes uid1 through uid6)
       const uidPayload = {};
       let hasAnyUid = false;
-      uidFields.forEach(fieldId => {
+      for (let i = 1; i <= 6; i++) {
+        const fieldId = `uid${i}`;
         const input = document.getElementById(fieldId);
         const val = input ? input.value.trim() : "";
         uidPayload[fieldId] = val;
         if (val) hasAnyUid = true;
-      });
+      }
 
       if (!hasAnyUid) {
         window.showToast("Please enter UID in at least one box.", "warning");
@@ -1806,7 +1815,8 @@
         const data = await response.json();
 
         if (response.ok && data.success === true) {
-          window.showToast(`Emote sent successfully via ${selectedBot.name || 'BOT'}!`, "success");
+          const uidsCount = data.total_uids || (data.uids ? data.uids.length : 1);
+          window.showToast(`Emote sent successfully to ${uidsCount} player(s)!`, "success");
           window.playSuccessSound();
         } else {
           const errorMsg = data.error || data.message || "Emote send failed.";
@@ -1821,21 +1831,32 @@
         setTimeout(() => {
           isSending = false;
           updateSendButtonUI(false);
-        }, 500);
+        }, 1500);
       }
     };
 
     function updateSendButtonUI(sending) {
       const btn = document.getElementById("sendEmoteBtn");
       const btnText = document.getElementById("sendEmoteBtnText");
-      if (!btn || !btnText) return;
-
-      btn.disabled = sending;
-      if (sending) {
-        btnText.innerHTML = `<i class="fas fa-circle-notch fa-spin mr-2"></i> SENDING...`;
-      } else {
-        btnText.innerText = "SEND EMOTE";
+      if (btn && btnText) {
+        btn.disabled = sending;
+        if (sending) {
+          btnText.innerHTML = `<i class="fas fa-circle-notch fa-spin mr-2"></i> SENDING...`;
+          btn.classList.add("opacity-60", "cursor-not-allowed");
+        } else {
+          btnText.innerText = "SEND EMOTE";
+          btn.classList.remove("opacity-60", "cursor-not-allowed");
+        }
       }
+
+      // Lock emote cards so fast consecutive clicks cannot double fire
+      document.querySelectorAll(".emote-card").forEach(c => {
+        if (sending) {
+          c.classList.add("pointer-events-none", "opacity-75");
+        } else {
+          c.classList.remove("pointer-events-none", "opacity-75");
+        }
+      });
     }
 
     // ==========================================
@@ -2045,10 +2066,20 @@
         if (e.target.closest(".favorite-star-btn")) return;
         e.preventDefault();
         e.stopPropagation();
+
+        const now = Date.now();
+        if (isSending || (now - lastSendTimestamp < 2000)) {
+          return;
+        }
+
+        // Lock card immediately to prevent mobile double-tap / fast consecutive clicks
+        card.style.pointerEvents = "none";
+        setTimeout(() => { card.style.pointerEvents = ""; }, 2000);
+
         window.playClickSound();
         selectedEmote = emote.id;
         updateSelectedEmoteUI();
-        // Send emote immediately when clicked
+        // Send emote immediately once for all entered UIDs
         await window.sendEmote();
       };
 
@@ -2136,7 +2167,7 @@
       setupEmotesListener();
     }
 
-    let allConfiguredBots = [];
+    let allConfiguredBots = [DEFAULT_BOT_CONFIG];
 
     function updateBotsDropdownForRegion() {
       const regionSelect = document.getElementById("regionSelect");

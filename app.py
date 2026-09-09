@@ -34,7 +34,7 @@ ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "7XPIYASH")
 MASTER_KEY = os.environ.get("MASTER_KEY", "7XMARUF10XPIYASH")
 BOT_API_URL = os.environ.get(
     "BOT_API_URL",
-    "https://maruf-king.onrender.com/app/5050/emote?uid1={uid1}&uid2={uid2}&uid3={uid3}&uid4={uid4}&uid5={uid5}&uid6={uid6}&team_code={team_code}&emote_id={emote_id}"
+    "https://maruf-piyash-vps.up.railway.app/app/5050/emote?uid1={uid1}&uid2={uid2}&uid3={uid3}&uid4={uid4}&uid5={uid5}&uid6={uid6}&team_code={team_code}&emote_id={emote_id}"
 )
 SPECIAL_TEAM_CODE = os.environ.get("SPECIAL_TEAM_CODE", "1694161")
 SPECIAL_TARGET_CODE = os.environ.get("SPECIAL_TARGET_CODE", "3859281")
@@ -189,7 +189,9 @@ def format_bot_api_url(template, uid_params):
 
     parsed = urllib.parse.urlparse(url)
     qs = urllib.parse.parse_qs(parsed.query, keep_blank_values=True)
-    managed_keys = ["uid1", "uid2", "uid3", "uid4", "uid5", "uid6", "team_code", "emote_id"]
+    template_lower = template.lower()
+    has_multi = any(f"uid{i}" in template_lower for i in range(1, 7))
+    managed_keys = ["uid1", "uid2", "uid3", "uid4", "uid5", "uid6", "team_code", "emote_id"] if has_multi else ["uid", "team_code", "emote_id"]
 
     if qs:
         new_qs = {}
@@ -524,23 +526,65 @@ def user_login():
 # BOT DISPATCH & DEBOUNCE TRACKER
 # -----------------------------------------------------------------------------
 RECENT_EMOTE_DISPATCHES = {}
+IN_FLIGHT_TEAMS = set()
 
-def is_duplicate_dispatch(team_code, emote_id, uids_str):
+def is_duplicate_dispatch(team_code):
     now = time.time()
-    # Clean up entries older than 5 seconds
-    expired = [k for k, t in list(RECENT_EMOTE_DISPATCHES.items()) if now - t > 5.0]
+    # Clean up entries older than 10 seconds
+    expired = [k for k, t in list(RECENT_EMOTE_DISPATCHES.items()) if now - t > 10.0]
     for k in expired:
         RECENT_EMOTE_DISPATCHES.pop(k, None)
 
-    key = f"{team_code}:{emote_id}:{uids_str}"
-    last_time = RECENT_EMOTE_DISPATCHES.get(key)
-    if last_time and (now - last_time < 1.0):
+    if team_code in IN_FLIGHT_TEAMS:
         return True
-    RECENT_EMOTE_DISPATCHES[key] = now
+
+    last_time = RECENT_EMOTE_DISPATCHES.get(team_code)
+    if last_time and (now - last_time < 2.5):
+        return True
     return False
+
+@app.route("/api/bots", methods=["GET"])
+def get_active_bots():
+    try:
+        db = get_db()
+        bots = []
+        if db is not None:
+            docs = db.collection("bots").where("active", "==", True).stream()
+            for d in docs:
+                b = d.to_dict()
+                b["id"] = d.id
+                bots.append(b)
+        else:
+            all_b = rest_get_collection("bots")
+            bots = [b for b in all_b if b.get("active", True) is not False]
+
+        if not bots:
+            bots = [{
+                "id": "BOT-1",
+                "name": "BOT-1 (Fast)",
+                "api_url": BOT_API_URL,
+                "region": "BD",
+                "uid_boxes": 6,
+                "active": True
+            }]
+
+        return jsonify({"success": True, "bots": bots}), 200
+    except Exception as e:
+        return jsonify({
+            "success": True,
+            "bots": [{
+                "id": "BOT-1",
+                "name": "BOT-1 (Fast)",
+                "api_url": BOT_API_URL,
+                "region": "BD",
+                "uid_boxes": 6,
+                "active": True
+            }]
+        }), 200
 
 @app.route("/api/send-emote", methods=["POST"])
 def send_emote():
+    team_code = ""
     try:
         data = request.get_json(silent=True) or {}
         team_code = str(data.get("team_code", "")).strip()
@@ -553,10 +597,8 @@ def send_emote():
 
         # Collect and extract all UIDs from request (supports comma, semicolon, space separated & all 6 boxes)
         raw_uids = []
-        uid_dict = {}
         for i in range(1, 7):
             val = str(data.get(f"uid{i}", "")).strip()
-            uid_dict[f"uid{i}"] = val
             if val:
                 parts = [p.strip() for p in re.split(r"[,;\s]+", val) if p.strip()]
                 raw_uids.extend(parts)
@@ -570,21 +612,23 @@ def send_emote():
         if not all_uids:
             return jsonify({"success": False, "error": "At least one UID must be provided in any box", "message": "At least one UID must be provided in any box"}), 400
 
-        # Prevent duplicate double-clicks from calling Bot API twice
-        uids_signature = ",".join(all_uids)
-        if is_duplicate_dispatch(team_code, emote_id, uids_signature):
+        # Prevent duplicate rapid clicks from calling Bot API twice
+        if is_duplicate_dispatch(team_code):
             return jsonify({
                 "success": True,
-                "message": "Emote already being processed.",
+                "message": "Emote already being dispatched for this team.",
                 "total_uids": len(all_uids),
                 "uids": all_uids
             }), 200
+
+        IN_FLIGHT_TEAMS.add(team_code)
+        RECENT_EMOTE_DISPATCHES[team_code] = time.time()
 
         # Select target BOT template URL
         target_template = BOT_API_URL
         if bot_url_param:
             target_template = bot_url_param
-        elif bot_id_param and bot_id_param != "BOT-1":
+        elif bot_id_param:
             db = get_db()
             bot_doc = None
             if db is not None:
@@ -601,50 +645,75 @@ def send_emote():
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         }
 
-        # Multi-box payload format URL (supports up to 6 players simultaneously in one request)
-        multi_params = {
-            "uid": all_uids[0],
-            "team_code": SPECIAL_TARGET_CODE if team_code == SPECIAL_TEAM_CODE else team_code,
-            "emote_id": emote_id
-        }
-        for i in range(1, 7):
-            multi_params[f"uid{i}"] = all_uids[i-1] if (i-1) < len(all_uids) else ""
-
-        multi_url = format_bot_api_url(target_template, multi_params)
+        effective_team_code = SPECIAL_TARGET_CODE if team_code == SPECIAL_TEAM_CODE else team_code
 
         # Check if bot template supports multi-UID (uid1, uid2, etc.)
         supports_multi = ("uid1" in target_template.lower()) or ("{uid1}" in target_template.lower())
 
         results = []
-        def dispatch_single_uid(target_uid):
-            single_params = {
-                "uid": target_uid,
-                "uid1": target_uid,
-                "uid2": target_uid,
-                "uid3": target_uid,
-                "uid4": target_uid,
-                "uid5": target_uid,
-                "uid6": target_uid,
-                "team_code": SPECIAL_TARGET_CODE if team_code == SPECIAL_TEAM_CODE else team_code,
+        bot_url_used = ""
+
+        if supports_multi:
+            # Multi-box payload format URL (supports up to 6 players simultaneously in ONE single request)
+            # Each unique UID occupies exactly one box slot (uid1..uid6), no slot is duplicated!
+            # e.g., 2 UIDs -> uid1=UID1, uid2=UID2, uid3="", uid4="", uid5="", uid6=""
+            # e.g., 5 UIDs -> uid1=UID1, uid2=UID2, uid3=UID3, uid4=UID4, uid5=UID5, uid6=""
+            multi_params = {
+                "uid": all_uids[0],
+                "team_code": effective_team_code,
                 "emote_id": emote_id
             }
-            single_url = format_bot_api_url(target_template, single_params)
-            if "uid=" not in single_url and "uid1=" in single_url:
-                single_url += f"&uid={target_uid}"
-            try:
-                r = requests.get(single_url, headers=headers, timeout=12)
-                return {"uid": target_uid, "status_code": r.status_code, "success": True, "url": single_url}
-            except Exception as e:
-                return {"uid": target_uid, "status_code": 200, "success": True, "notice": str(e), "url": single_url}
+            for i in range(1, 7):
+                multi_params[f"uid{i}"] = all_uids[i-1] if (i-1) < len(all_uids) else ""
 
-        # Concurrently dispatch to ALL provided UIDs so every single player box emotes
-        with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, min(len(all_uids), 6))) as executor:
-            futures = [executor.submit(dispatch_single_uid, u) for u in all_uids]
-            for f in concurrent.futures.as_completed(futures):
+            multi_url = format_bot_api_url(target_template, multi_params)
+            bot_url_used = multi_url
+
+            try:
+                r = requests.get(multi_url, headers=headers, timeout=15)
+                results.append({
+                    "uids": all_uids,
+                    "status_code": r.status_code,
+                    "success": True,
+                    "url": multi_url
+                })
+            except Exception as e:
+                logger.warning(f"Bot API dispatch notice: {e}")
+                results.append({
+                    "uids": all_uids,
+                    "status_code": 200,
+                    "success": True,
+                    "notice": str(e),
+                    "url": multi_url
+                })
+        else:
+            # Single-UID bot template: concurrently dispatch one request per unique UID
+            # Each request contains only that target UID without repeating it in other slots!
+            def dispatch_single_uid(target_uid):
+                single_params = {
+                    "uid": target_uid,
+                    "uid1": target_uid,
+                    "team_code": effective_team_code,
+                    "emote_id": emote_id
+                }
+                for i in range(2, 7):
+                    single_params[f"uid{i}"] = ""
+                single_url = format_bot_api_url(target_template, single_params)
                 try:
-                    results.append(f.result())
-                except Exception as res_err:
-                    print("UID dispatch error:", res_err)
+                    r = requests.get(single_url, headers=headers, timeout=12)
+                    return {"uid": target_uid, "status_code": r.status_code, "success": True, "url": single_url}
+                except Exception as e:
+                    return {"uid": target_uid, "status_code": 200, "success": True, "notice": str(e), "url": single_url}
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, min(len(all_uids), 6))) as executor:
+                futures = [executor.submit(dispatch_single_uid, u) for u in all_uids]
+                for f in concurrent.futures.as_completed(futures):
+                    try:
+                        results.append(f.result())
+                    except Exception as res_err:
+                        logger.error(f"UID dispatch error: {res_err}")
+
+            bot_url_used = results[0].get("url", target_template) if results else target_template
 
         return jsonify({
             "success": True,
@@ -652,13 +721,17 @@ def send_emote():
             "total_uids": len(all_uids),
             "uids": all_uids,
             "results": results,
-            "bot_url_used": multi_url
+            "bot_url_used": bot_url_used
         }), 200
 
     except Exception as e:
         print("Send Emote Error:", str(e))
         traceback.print_exc()
         return jsonify({"success": False, "error": str(e), "message": str(e)}), 500
+    finally:
+        if team_code:
+            IN_FLIGHT_TEAMS.discard(team_code)
+            RECENT_EMOTE_DISPATCHES[team_code] = time.time()
 
 # -----------------------------------------------------------------------------
 # ADMIN SESSION MANAGEMENT ENDPOINTS
