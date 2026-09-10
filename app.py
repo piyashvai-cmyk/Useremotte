@@ -650,69 +650,71 @@ def send_emote():
         results = []
         bot_url_used = ""
 
-        # Fetch available active bots for this region to rotate if multiple bots exist
-        active_bots_for_region = []
-        try:
-            db = get_db()
-            all_bots = []
-            if db is not None:
-                docs = db.collection("bots").where("active", "==", True).stream()
-                for d in docs:
-                    b = d.to_dict()
-                    b["id"] = d.id
-                    all_bots.append(b)
-            else:
-                all_bots = [b for b in rest_get_collection("bots") if b.get("active", True) is not False]
+        # Check if bot template supports multi-UID (uid1, uid2, etc.)
+        supports_multi = ("uid1" in target_template.lower()) or ("{uid1}" in target_template.lower())
 
-            req_region = str(data.get("region", "")).strip().upper()
-            for b in all_bots:
-                b_reg = str(b.get("region", "ALL")).strip().upper()
-                if b_reg == req_region or b_reg == "ALL" or not req_region:
-                    active_bots_for_region.append(b)
-        except Exception as e:
-            logger.warning(f"Error fetching active bots for region rotation: {e}")
+        results = []
+        bot_url_used = ""
 
-        # Sequential dispatch for each player UID (guarantees Box 1, Box 2, Box 3, Box 4, Box 5, Box 6 all get the emote in-game)
-        for idx, target_uid in enumerate(all_uids):
-            curr_template = target_template
-            # If multiple active bots are configured for this region, rotate between them
-            if active_bots_for_region and len(active_bots_for_region) > 1:
-                b_choice = active_bots_for_region[idx % len(active_bots_for_region)]
-                curr_template = b_choice.get("api_url") or b_choice.get("url") or target_template
-
-            single_params = {
-                "uid": target_uid,
-                "uid1": target_uid,
+        if supports_multi:
+            # Multi-UID dispatch: all player UIDs (1 to 6) are sent simultaneously in ONE single request
+            # All players perform the emote at the exact same time without any sequential delay
+            multi_params = {
+                "uid": all_uids[0],
                 "team_code": effective_team_code,
                 "emote_id": emote_id
             }
-            for j in range(2, 7):
-                single_params[f"uid{j}"] = ""
+            for i in range(1, 7):
+                multi_params[f"uid{i}"] = all_uids[i - 1] if (i - 1) < len(all_uids) else ""
 
-            single_url = format_bot_api_url(curr_template, single_params)
-            bot_url_used = single_url
+            multi_url = format_bot_api_url(target_template, multi_params)
+            bot_url_used = multi_url
 
             try:
-                r = requests.get(single_url, headers=headers, timeout=12)
+                r = requests.get(multi_url, headers=headers, timeout=15)
                 results.append({
-                    "uid": target_uid,
+                    "uids": all_uids,
                     "status_code": r.status_code,
                     "success": True,
-                    "url": single_url
+                    "url": multi_url
                 })
             except Exception as e:
-                logger.warning(f"Bot API dispatch notice for UID {target_uid}: {e}")
+                logger.warning(f"Bot API dispatch notice: {e}")
                 results.append({
-                    "uid": target_uid,
+                    "uids": all_uids,
                     "status_code": 200,
                     "success": True,
                     "notice": str(e),
-                    "url": single_url
+                    "url": multi_url
                 })
+        else:
+            # Single-UID template: dispatch concurrently to all UIDs simultaneously via ThreadPoolExecutor
+            # All threads execute at the exact same instant so all players emote together
+            def dispatch_single_uid(target_uid):
+                single_params = {
+                    "uid": target_uid,
+                    "uid1": target_uid,
+                    "team_code": effective_team_code,
+                    "emote_id": emote_id
+                }
+                for j in range(2, 7):
+                    single_params[f"uid{j}"] = ""
+                single_url = format_bot_api_url(target_template, single_params)
+                try:
+                    r = requests.get(single_url, headers=headers, timeout=12)
+                    return {"uid": target_uid, "status_code": r.status_code, "success": True, "url": single_url}
+                except Exception as e:
+                    return {"uid": target_uid, "status_code": 200, "success": True, "notice": str(e), "url": single_url}
 
-            # Small 1-second pause between consecutive UIDs to allow Free Fire game server & bot socket to reset
-            if idx < len(all_uids) - 1:
-                time.sleep(1.0)
+            with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, min(len(all_uids), 6))) as executor:
+                futures = [executor.submit(dispatch_single_uid, u) for u in all_uids]
+                for f in concurrent.futures.as_completed(futures):
+                    try:
+                        results.append(f.result())
+                    except Exception as res_err:
+                        logger.error(f"UID dispatch error: {res_err}")
+
+            bot_url_used = results[0].get("url", target_template) if results else target_template
 
         return jsonify({
             "success": True,
